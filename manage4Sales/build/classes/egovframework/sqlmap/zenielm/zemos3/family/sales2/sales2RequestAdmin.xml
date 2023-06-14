@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2RequestAdmin">
+
+	<!-- 제모스 판매관리 수정요청관리 XML -->
+
+	<!-- Sample -->
+	<select id="selectSales2RequestAdmin" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2RequestAdmin.selectSales2RequestAdmin */
+		SELECT 1
+	</select>
+	
+</mapper>

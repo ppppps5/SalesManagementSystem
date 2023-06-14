@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2History">
+
+	<!-- 제모스 판매관리 변경이력조회 XML -->
+	
+	<select id="salesHistoryCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2History.salesHistoryCnt */
+		select count(*) as cnt
+		     , sum(a.resultAmt) as resultAmt
+			 , sum(a.resultQty) as resultQty
+			 , sum(a.changeAmt) as changeAmt 
+			 , sum(a.changeQty) as changeQty
+		  from (
+				select  concat(@rownum:=@rownum+1) AS rn
+				      , a.itemSeq
+				      , a.storeNm
+					  , a.itemNm
+					  , a.resultSeq
+				  	  , a.resultDetailSeq
+					  , a.modifyDt
+					  , a.resultAmt
+					  , a.resultQty
+					  , a.changeAmt
+					  , a.changeQty
+					  , a.fileOwner
+					  , a.idx
+					  , a.requestYn
+					  , a.storeSeq
+					  , a.historySeq
+					  , a.detailHistorySeq
+					  , a.rejectDesc
+			  		  , a.description
+				 from (
+						select b.item_seq as itemSeq
+							 , (select item_nm from ZM_SALES_ITEM where item_seq = b.item_seq and wrkplc_idx = b.wrkplc_idx) as itemNm
+							 , (select store_nm from ZM_SALES_STORE where a.zemos_idx = zemos_idx and a.wrkplc_idx = wrkplc_idx and a.store_seq = store_seq) as storeNm
+							 , d.result_seq as resultSeq
+						  	 , d.result_detail_seq as resultDetailSeq
+							 , date_format(b.modify_dt, '%Y-%m-%d') AS modifyDt
+							 , ifnull(b.result_amt, 0) as resultAmt
+							 , ifnull(b.result_qty, 0) as resultQty
+							 , ifnull(b.change_amt, 0) as changeAmt
+							 , ifnull(b.change_qty, 0) as changeQty
+							 , c.file_owner as fileOwner
+							 , (select idx from ZM_ATCHMNFL where c.file_owner = file_owner) as idx
+							 , a.request_yn as requestYn
+							 , a.store_seq as storeSeq
+							 , b.history_seq as historySeq
+							 , b.detail_history_seq as detailHistorySeq
+							 , a.reject_desc as rejectDesc
+					 		 , a.description as description
+						  from ZM_SALES_HISTORY_MNG a
+						       inner join ZM_SALES_HISTORY_DETAIL b on a.history_seq = b.history_seq and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq
+						       inner join ZM_SALES_RESULT_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and c.result_seq = a.result_seq
+						       inner join ZM_SALES_RESULT_DETAIL d on a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and c.result_seq = d.result_seq 
+						       and b.item_seq = d.item_seq
+						       and a.result_change_seq = (SELECT MAX(result_change_seq) FROM ZM_SALES_HISTORY_MNG WHERE 1=1 AND result_seq = c.result_seq)
+						     , (select @rownum := 0 ) e  
+						 where 1 = 1
+						   <if test='salesabun != null and salesabun != ""'>
+						   and a.store_seq in (select store_seq from ZM_SALES_STORE where 1=1 and (sabun = #{salesabun} or sabun2 = #{salesabun}) and use_yn = 'Y')
+						   </if>	
+						   <if test='storeSeq != null and storeSeq != ""'>
+						   and a.store_seq = #{storeSeq}
+						   </if>
+						   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+						   and a.wrkplc_idx = #{wrkplcIdx}
+						   </if>
+						   and b.modify_dt between date_format(replace(#{startDate}, '-', ''), '%Y%m%d') and date_format(replace(#{endDate}, '-', ''), '%Y%m%d')
+						 order by b.modify_dt desc,a.result_Seq 
+				 	  ) a
+				 	 ,(select @rownum := 0 ) e
+		       ) a
+	</select>
+	
+	<select id="salesHistory" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2HistorysalesHistory */
+		select  concat(@rownum:=@rownum+1) AS rn
+		      , a.itemSeq
+		      , a.storeNm
+			  , a.itemNm
+			  , a.resultSeq
+		  	  , a.resultDetailSeq
+			  , a.modifyDt
+			  , a.resultAmt
+			  , a.resultQty
+			  , a.changeAmt
+			  , a.changeQty
+			  , a.excelResultAmt
+			  , a.excelResultQty
+			  , a.excelChangeAmt
+			  , a.excelChangeQty
+			  , a.fileOwner
+			  , a.idx
+			  , a.requestYn
+			  , a.storeSeq
+			  , a.historySeq
+			  , a.detailHistorySeq
+			  , a.rejectDesc
+	  		  , a.description
+		 from (
+				select b.item_seq as itemSeq
+					 , (select item_nm from ZM_SALES_ITEM where item_seq = b.item_seq and wrkplc_idx = b.wrkplc_idx) as itemNm
+					 , (select store_nm from ZM_SALES_STORE where a.zemos_idx = zemos_idx and a.wrkplc_idx = wrkplc_idx and a.store_seq = store_seq) as storeNm
+					 , d.result_seq as resultSeq
+				  	 , d.result_detail_seq as resultDetailSeq
+					 , date_format(b.modify_dt, '%Y-%m-%d') AS modifyDt
+					 , format(b.result_amt, '##0.######') as resultAmt
+					 , format(b.result_qty, '##0.######') as resultQty
+					 , format(b.change_amt, '##0.######') as changeAmt
+					 , format(b.change_qty, '##0.######') as changeQty
+					 , ifnull(b.result_amt, 0) as excelResultAmt
+					 , ifnull(b.result_qty, 0) as excelResultQty
+					 , ifnull(b.change_amt, 0) as excelChangeAmt
+					 , ifnull(b.change_qty, 0) as excelChangeQty
+					 , c.file_owner as fileOwner
+					 , (select idx from ZM_ATCHMNFL where c.file_owner = file_owner) as idx
+					 , a.request_yn as requestYn
+					 , a.store_seq as storeSeq
+					 , b.history_seq as historySeq
+					 , b.detail_history_seq as detailHistorySeq
+					 , a.reject_desc as rejectDesc
+			 		 , a.description as description
+				  from ZM_SALES_HISTORY_MNG a
+				       inner join ZM_SALES_HISTORY_DETAIL b on a.history_seq = b.history_seq and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq
+				       inner join ZM_SALES_RESULT_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and c.result_seq = a.result_seq
+				       inner join ZM_SALES_RESULT_DETAIL d on a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and c.result_seq = d.result_seq 
+				       and b.item_seq = d.item_seq
+				       and a.result_change_seq = (SELECT MAX(result_change_seq) FROM ZM_SALES_HISTORY_MNG WHERE 1=1 AND result_seq = c.result_seq)
+				     , (select @rownum := 0 ) e  
+				 where 1 = 1
+				   <if test='salesabun != null and salesabun != ""'>
+				   and a.store_seq in (select store_seq from ZM_SALES_STORE where 1=1 and (sabun = #{salesabun} or sabun2 = #{salesabun}) and use_yn = 'Y')
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   and b.modify_dt between date_format(replace(#{startDate}, '-', ''), '%Y%m%d') and date_format(replace(#{endDate}, '-', ''), '%Y%m%d')
+				 order by b.modify_dt desc,a.result_Seq 
+		 	  ) a
+		 	 ,(select @rownum := 0 ) e
+		 	 <if test='start != null and start != "" and limit != null and limit != ""'>
+			 LIMIT ${start}, ${limit}
+			 </if>
+	</select>
+	
+</mapper>

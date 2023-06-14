@@ -1,0 +1,150 @@
+{
+	"imgWidth" : 0,
+	"imgHeight" : 87,
+	"eventDev" : {
+        "imgUrl" : "",
+        "imgName" : "banner_event_ceramics.png",
+        "alt" : "도자기 이벤트",
+        "display" : "false",
+        "idx" : 99,
+        "boardIdx" : 1339
+    },
+    "eventDev02" : {
+    	"imgUrl" : "", 
+        "imgName" : "banner_clear.png",
+        "alt" : "에스쁘아 이벤트",
+        "display" : "false",
+        "idx" : 98,
+        "boardIdx" : 1425
+    },
+    "eventDev05" : {
+        "imgUrl" : "/zemos3/com/admin/zemosEvent.do",
+        "imgName" : "banner_event_ucc.png",
+        "alt" : "2019 여름 휴가 UCC 콘테스트",
+        "display" : "false",
+        "idx" : 3,
+        "boardIdx" : 9502
+    },
+    "eventDev03" : {
+        "imgUrl" : "http://zenielmac.my-t.co.kr/new/",
+        "imgName" : "banner_event_telecom.jpg",
+        "alt" : "TELECOM 이벤트",
+        "display" : "false",
+        "idx" : 97
+    },
+    "eventDev04" : {
+        "imgUrl" : "",
+        "imgName" : "banner_event_check.png",
+        "alt" : "당첨확인 이벤트",
+        "display" : "false",
+        "idx" : 96,
+        "boardIdx" : 1153,
+        "commentEvent" : "false",
+        "eventResult" : ""
+    },
+    "eventPrd" : {
+        "imgUrl" : "",
+        "imgName" : "banner_event_ceramics.png",
+        "alt" : "도자기 이벤트",
+        "display" : "false",
+        "idx" : 99,
+        "boardIdx" : 1254
+    },
+    "eventPrd02" : {
+    	"imgUrl" : "",
+        "imgName" : "banner_clear.png",
+        "alt" : "에스쁘아 이벤트",
+        "display" : "false",
+        "idx" : 98,
+        "boardIdx" : 6848
+    },
+    "eventPrd05" : {
+        "imgUrl" : "/zemos3/com/admin/zemosEvent.do",
+        "imgName" : "banner_event_ucc.png",
+        "alt" : "2019 여름 휴가 UCC 콘테스트",
+        "display" : "false",
+        "idx" : 3,
+        "boardIdx" : 9502
+    },        
+    "eventPrd03" : {
+    "imgUrl" : "http://zenielmac.my-t.co.kr/new/",
+    "imgName" : "banner_event_telecom.jpg",
+    "alt" : "TELECOM 이벤트",
+    "display" : "false",
+    "idx" : 97
+    },
+    "eventPrd04" : {
+        "imgUrl" : "",
+        "imgName" : "banner_event_check.png",
+        "alt" : "당첨확인 이벤트",
+        "display" : "false",
+        "idx" : 96,
+        "boardIdx" : 423,
+        "commentEvent" : "false",
+        "eventResult" : ""
+    },
+    "UCC" : {
+        "imgUrl" : "https://m.zemos.co.kr/zemos3/com/admin/zemosEvent.do",
+        "imgName" : "banner_event_20201008.png",
+        "alt" : "UCC",
+        "display" : "false",
+        "idx" : 0
+    }, 
+    "card01" : {
+        "imgUrl" : "https://forms.gle/q4sG7udv7UTLbwYD9",
+        "imgName" : "banner_event_20221230.png",
+        "alt" : "전자랜드",
+        "display" : "false",
+        "idx" : 3
+    },
+    "blue" : {
+        "imgUrl" : "https://www.youtube.com/channel/UCzumNtLVW_-kYD6GAatY_Zg",
+        "imgName" : "banner_event_20200702.png",
+        "alt" : "잡토피아",
+        "display" : "true",
+        "idx" : 1
+     },
+    "card" : {
+        "imgUrl" : "https://m.zemos.co.kr/zemos3/family/notice/noticeSelect.do?idx=18882",
+        "imgName" : "banner_kb_card.png",
+        "alt" : "펭수카드",
+        "display" : "false",
+        "idx" : 2
+    },
+    
+    "card02" : {
+        "imgUrl" : "https://m.zemos.co.kr/zemos3/family/notice/noticeSelect.do?idx=18884",
+        "imgName" : "banner_event_KB.jpg",
+        "alt" : "국민카드",
+        "display" : "false",
+        "idx" : 4
+    },
+    "telecom" : {
+        "imgUrl" : "http://zenielmac.my-t.co.kr/new/",
+        "imgName" : "banner_event_telecom.jpg",
+        "alt" : "TELECOM 이벤트",
+        "display" : "true",
+        "idx" : 5
+    },
+    "weal" : {
+        "imgUrl" : "https://www.wealshop.co.kr/birthday/birthday_direct_proc.php",
+        "imgName" : "banner_weal.png",
+        "alt" : "윌샵",
+        "display" : "true",
+        "idx" : 0
+    },
+    "tour" : {
+        "imgUrl" : "http://c07410s002.travelservice.co.kr/",
+        "imgName" : "banner_tour.png",
+        "alt" : "여행",
+        "display" : "false",
+        "idx" : 7
+    },    
+    "flower" : {
+        "imgUrl" : "http://www.zenielsystem.co.kr/sunflower.html",
+        "imgName" : "banner_flower.png",
+        "alt" : "플라워",
+        "display" : "true",
+        "idx" : 8
+    }
+}

@@ -1,0 +1,1951 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2Result">
+	
+	<!-- 실적업로드 / 수정요청관리 권한 List -->
+	<select id="selectUpAppList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectUpAppList */
+		select ZEMOS_IDX
+		      ,WRKPLC_IDX 
+		      ,SABUN 
+		      ,STORE_SEQ
+		      ,UPLOAD_YN 
+		      ,APPROVAL_YN 
+		FROM ZM_SALE_STORE_SM 
+		where 1=1 
+		and sabun = #{sabun}
+		<if test='storeSeq != null and storeSeq != ""'>
+	    and store_seq = #{storeSeq}
+	    </if>
+		<if test='zemosIdx != null and zemosIdx != ""'>
+		and zemos_idx = #{zemosIdx}
+		</if>
+		<if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		and wrkplc_idx = #{wrkplcIdx}
+		</if>
+	</select>
+	
+	<!-- 매장명칭 List -->
+	<select id="selectStoreNewUseNameList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectStoreNewUseNameList */
+		   select zemos_idx as zemosIdx
+		         ,store_use_nm as storeUseNm
+		   from ZM_SALES_STORE_NM
+		   where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   LIMIT 1
+	</select>
+	
+	<!-- 품목명칭 List -->
+	<select id="storeitemName" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.storeitemName */
+		   select zemos_idx as zemosIdx
+		         ,item_use_nm as itemUseNm 
+		   from ZM_SALES_ITEM_NM
+		   where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   LIMIT 1
+	</select>
+	
+	<!-- 셀렉박스 매장명칭 List -->
+	<select id="selectBoxStoreList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectBoxStoreList */
+		   select a.zemos_idx  as zemosIdx
+			     ,a.wrkplc_idx as wrkplcIdx
+			     ,a.store_seq  as storeSeq
+			     ,a.store_nm   as storeNm
+		   from ZM_SALES_STORE a
+		   left join ZM_SALES_RESULT_EX b on a.zemos_idx = b.zemos_idx 
+		   and a.wrkplc_idx = b.wrkplc_idx 
+		   and a.store_seq = b.store_seq		   
+		   where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   and a.use_yn = 'Y'
+		   group by a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+		   order by a.store_nm
+	</select>
+	
+	<!-- 실적 List Count -->
+	<select id="selectResultCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResultCnt */
+SELECT count(*) as cnt
+  FROM ( 
+		SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				, CASE WHEN c.unit1_yn = 'Y' THEN '1' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit1_yn ='Y' THEN c.unit_seq1 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn,'0')   <![CDATA[ <> ]]>   'Y' 	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				, CASE WHEN c.unit1_yn = 'Y' THEN '1' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit1_yn ='Y' THEN c.unit_seq1 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq    
+			AND IFNULL(b.request_yn_on,'0')   <![CDATA[ <> ]]>   'Y'   
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				, CASE WHEN c.unit2_yn = 'Y' THEN '2' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit2_yn ='Y' THEN c.unit_seq2 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt2), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn2,'0')   <![CDATA[ <> ]]>   'Y'	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				, CASE WHEN c.unit2_yn = 'Y' THEN '2' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit2_yn ='Y' THEN c.unit_seq2 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt2_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq   
+			AND IFNULL(b.request_yn2_on,'0')   <![CDATA[ <> ]]>   'Y'    
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				, CASE WHEN c.unit3_yn = 'Y' THEN '3' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit3_yn ='Y' THEN c.unit_seq3 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt3), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq
+			AND IFNULL(b.request_yn3,'0')   <![CDATA[ <> ]]>   'Y'		        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				, CASE WHEN c.unit3_yn = 'Y' THEN '3' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit3_yn ='Y' THEN c.unit_seq3 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt3_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq  
+			AND IFNULL(b.request_yn3_on,'0')   <![CDATA[ <> ]]>   'Y'     
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				, CASE WHEN c.unit4_yn = 'Y' THEN '4' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit4_yn ='Y' THEN c.unit_seq4 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt4), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq
+			AND IFNULL(b.request_yn4,'0')   <![CDATA[ <> ]]>   'Y'		        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				, CASE WHEN c.unit4_yn = 'Y' THEN '4' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit4_yn ='Y' THEN c.unit_seq4 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt4_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq     
+			AND IFNULL(b.request_yn4_on,'0')   <![CDATA[ <> ]]>   'Y'  
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				, CASE WHEN c.unit5_yn = 'Y' THEN '5' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit5_yn ='Y' THEN c.unit_seq5 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt5), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn5,'0')   <![CDATA[ <> ]]>   'Y'	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				, CASE WHEN c.unit5_yn = 'Y' THEN '5' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit5_yn ='Y' THEN c.unit_seq5 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt5_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq  
+			AND IFNULL(b.request_yn5_on,'0')   <![CDATA[ <> ]]>   'Y'     
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+	) a
+	WHERE 1=1
+	AND a.unitYn <![CDATA[ <> ]]> '0'
+	AND a.onoffNM <![CDATA[ <> ]]> '0'
+	ORDER BY a.storeNm,a.unitNm,a.onoffNM		   
+	</select>
+	
+	<select id="selectResult" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResult */
+SELECT a.zemosIdx
+		,a.wrkplcIdx
+		,a.storeSeq
+		,a.storeNm
+		,a.year
+		,a.unitYn
+		,a.unitSeq
+		,a.unitNm
+		,a.offYn
+		,a.onYn
+		,a.onoffNM
+		,a.totResult
+		,a.itemCnt
+  FROM (
+		SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit1_yn = 'Y' THEN '1' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit1_yn ='Y' THEN c.unit_seq1 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn,'0') <![CDATA[ <> ]]> 'Y' 	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> NOW()
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit1_yn = 'Y' THEN '1' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit1_yn ='Y' THEN c.unit_seq1 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq      
+			AND IFNULL(b.request_yn_on,'0') <![CDATA[ <> ]]> 'Y'  
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit2_yn = 'Y' THEN '2' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit2_yn ='Y' THEN c.unit_seq2 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt2), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq		
+			AND IFNULL(b.request_yn2,'0') <![CDATA[ <> ]]> 'Y'        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit2_yn = 'Y' THEN '2' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit2_yn ='Y' THEN c.unit_seq2 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt2_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq     
+			AND IFNULL(b.request_yn2_on,'0') <![CDATA[ <> ]]> 'Y'  
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit3_yn = 'Y' THEN '3' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit3_yn ='Y' THEN c.unit_seq3 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt3), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn3,'0') <![CDATA[ <> ]]> 'Y'	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit3_yn = 'Y' THEN '3' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit3_yn ='Y' THEN c.unit_seq3 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt3_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq  
+			AND IFNULL(b.request_yn3_on,'0') <![CDATA[ <> ]]> 'Y'     
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit4_yn = 'Y' THEN '4' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit4_yn ='Y' THEN c.unit_seq4 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt4), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn4,'0') <![CDATA[ <> ]]> 'Y'	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit4_yn = 'Y' THEN '4' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit4_yn ='Y' THEN c.unit_seq4 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt4_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq   
+			AND IFNULL(b.request_yn4_on,'0') <![CDATA[ <> ]]> 'Y'    
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL 
+			SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit5_yn = 'Y' THEN '5' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit5_yn ='Y' THEN c.unit_seq5 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) as unitNm
+				, CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+				, '0'      AS onYn
+				, CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+				, CASE WHEN a.off_yn = 'Y' THEN ifnull(sum(b.amt5), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq	
+			AND IFNULL(b.request_yn5,'0') <![CDATA[ <> ]]> 'Y'	        
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+			UNION ALL
+		 SELECT  a.zemos_idx  AS zemosIdx
+				, a.wrkplc_idx AS wrkplcIdx
+				, a.store_seq  AS storeSeq
+				, a.store_nm   AS storeNm			 
+				, b.year       AS year
+				,(SELECT COUNT(z.use_yn) FROM ZM_SALES_STORE_DETAIL_ITEM z WHERE z.store_seq = a.store_seq AND z.use_yn ='Y') AS itemCnt
+				, CASE WHEN c.unit5_yn = 'Y' THEN '5' ELSE '0' END AS unitYn
+				, CASE WHEN c.unit5_yn ='Y' THEN c.unit_seq5 ELSE '0' END  AS unitSeq
+				, (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) AS unitNm
+				, '0'      AS offYn
+				, CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+				, CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END     AS onoffNM
+				, CASE WHEN a.on_yn = 'Y' THEN ifnull(sum(b.amt5_on), 0) ELSE '0' END AS totResult
+			FROM ZM_SALES_STORE a
+			JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq
+			 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+			AND a.wrkplc_idx = b.wrkplc_idx
+			AND a.store_seq = b.store_seq  
+			AND IFNULL(b.request_yn5_on,'0') <![CDATA[ <> ]]> 'Y'     
+			<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+			GROUP BY a.zemos_idx, a.wrkplc_idx, a.store_seq, b.year
+	) a
+	WHERE 1=1
+	AND a.unitYn <![CDATA[ <> ]]> '0'
+	AND a.onoffNM <![CDATA[ <> ]]> '0'
+	ORDER BY a.storeNm,a.unitNm,a.onoffNM
+	</select>
+	
+	<select id="selectResultDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResultDetail */
+		select a.result_ex_seq   as resultexSeq
+			 , a.zemos_idx  as zemosIdx
+			 , a.wrkplc_idx as wrkplcIdx
+			 , a.store_seq  as storeSeq
+			 , a.item_seq as itemSeq
+			 , (select item_nm from ZM_SALES_ITEM where zemos_idx = a.zemos_idx and wrkplc_idx = a.wrkplc_idx and item_seq = a.item_seq) as itemNm
+			 , #{unitSeq} as unitSeq
+			 , #{unitNm} as unitNm
+			 , #{onoffNM} as onoffNM
+			 , #{unitYn} as unitYn
+			 , #{storeNm} as storeNm
+			 , a.year       as year
+			 , a.mm         as mm
+			 , a.dd         as dd
+			 , concat(a.year,'-',a.mm,'-',a.dd) as yearMmdd
+			 <if test='unitYn == "1"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt, '#,###'), 0) as amt
+										, a.request_yn as requestYn
+			 							, ifnull(format(a.qty, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt_on, '#,###'), 0) as amt
+										, a.request_yn_on as requestYn
+			 						   , ifnull(format(a.qty_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "2"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt2, '#,###'), 0) as amt
+			 							, a.request_yn2 as requestYn
+			 							, ifnull(format(a.qty2, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt2_on, '#,###'), 0) as amt
+			 							, a.request_yn2_on as requestYn
+			 						   , ifnull(format(a.qty2_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "3"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt3, '#,###'), 0) as amt
+			 							, a.request_yn3 as requestYn
+			 							, ifnull(format(a.qty3, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt3_on, '#,###'), 0) as amt
+			 							, a.request_yn3_on as requestYn
+			 						   , ifnull(format(a.qty3_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "4"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt4, '#,###'), 0) as amt
+			 							, a.request_yn4 as requestYn
+			 							, ifnull(format(a.qty4, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt4_on, '#,###'), 0) as amt
+			 							, a.request_yn4_on as requestYn
+			 						   , ifnull(format(a.qty4_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "5"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt5, '#,###'), 0) as amt
+			 							, a.request_yn5 as requestYn
+			 							, ifnull(format(a.qty5, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt5_on, '#,###'), 0) as amt
+			 							, a.request_yn5_on as requestYn
+			 						   , ifnull(format(a.qty5_on, '#,###'), 0) as qty</if>
+			 </if>
+			 , a.reg_dttm   as regDttm
+			 , a.reg_user   as regUser
+			 , a.mod_dttm   as modDttm
+			 , a.mod_user   as modUser
+		  from ZM_SALES_RESULT_EX a
+		 where 1 = 1
+		   and a.zemos_idx = #{zemosIdx}
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   and a.store_seq  = #{storeSeq}
+		   <if test='unitYn == "1"'>
+			 	<if test='onoffNM == "오프라인"'>and ifnull(a.request_yn, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 	<if test='onoffNM == "온라인"'>and ifnull(a.request_yn_on, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			</if>
+			 <if test='unitYn == "2"'>
+			 	<if test='onoffNM == "오프라인"'>and ifnull(a.request_yn2, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 	<if test='onoffNM == "온라인"'>and ifnull(a.request_yn2_on, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 </if>
+			 <if test='unitYn == "3"'>
+			 	<if test='onoffNM == "오프라인"'>and ifnull(a.request_yn3, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 	<if test='onoffNM == "온라인"'>and ifnull(a.request_yn3_on, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 </if>
+			 <if test='unitYn == "4"'>
+			 	<if test='onoffNM == "오프라인"'>and ifnull(a.request_yn4, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 	<if test='onoffNM == "온라인"'>and ifnull(a.request_yn4_on, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 </if>
+			 <if test='unitYn == "5"'>
+			 	<if test='onoffNM == "오프라인"'>and ifnull(a.request_yn5, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 	<if test='onoffNM == "온라인"'>and ifnull(a.request_yn5_on, 'N') <![CDATA[ <> ]]> 'Y'</if>
+			 </if>
+		   
+		   <if test='unitYn == "1"'> and a.unit_seq1 = #{unitSeq}</if>
+		   <if test='unitYn == "2"'> and a.unit_seq2 = #{unitSeq}</if>
+		   <if test='unitYn == "3"'> and a.unit_seq3 = #{unitSeq}</if>
+		   <if test='unitYn == "4"'> and a.unit_seq4 = #{unitSeq}</if>
+		   <if test='unitYn == "5"'> and a.unit_seq5 = #{unitSeq}</if>
+		   AND concat(a.year,'-',a.mm,'-',a.dd) <![CDATA[ >= ]]>  #{startDay}
+				AND concat(a.year,'-',a.mm,'-',a.dd)   <![CDATA[ <= ]]>  #{endDay}
+		 order by concat(a.year,'-',a.mm,'-',a.dd),a.item_seq
+	</select>
+	
+	<select id="selectResultDetail01" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResultDetail01 */
+		select a.result_ex_seq   as resultexSeq
+			 , a.zemos_idx  as zemosIdx
+			 , a.wrkplc_idx as wrkplcIdx
+			 , a.store_seq  as storeSeq
+			 , a.item_seq as itemSeq
+			 , (select item_nm from ZM_SALES_ITEM where zemos_idx = a.zemos_idx and wrkplc_idx = a.wrkplc_idx and item_seq = a.item_seq) as itemNm
+			 , #{unitSeq} as unitSeq
+			 , #{unitNm} as unitNm
+			 , #{onoffNM} as onoffNM
+			 , #{unitYn} as unitYn
+			 , #{storeNm} as storeNm
+			 , a.year       as year
+			 , a.mm         as mm
+			 , a.dd         as dd
+			 , concat(a.year,'-',a.mm,'-',a.dd) as yearMmdd
+			 , a.request_yn as requestYn
+			 <if test='unitYn == "1"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt, '#,###'), 0) as amt
+			 							, ifnull(format(a.qty, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt_on, '#,###'), 0) as amt
+			 						   , ifnull(format(a.qty_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "2"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt2, '#,###'), 0) as amt
+			 							, ifnull(format(a.qty2, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt2_on, '#,###'), 0) as amt
+			 						   , ifnull(format(a.qty2_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "3"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt3, '#,###'), 0) as amt
+			 							, ifnull(format(a.qty3, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt3_on, '#,###'), 0) as amt
+			 						   , ifnull(format(a.qty3_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "4"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt4, '#,###'), 0) as amt
+			 							, ifnull(format(a.qty4, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt4_on, '#,###'), 0) as amt
+			 						   , ifnull(format(a.qty4_on, '#,###'), 0) as qty</if>
+			 </if>
+			 <if test='unitYn == "5"'>
+			 	<if test='onoffNM == "오프라인"'>, ifnull(format(a.amt5, '#,###'), 0) as amt
+			 							, ifnull(format(a.qty5, '#,###'), 0) as qty</if>
+			 	<if test='onoffNM == "온라인"'>, ifnull(format(a.amt5_on, '#,###'), 0) as amt
+			 						   , ifnull(format(a.qty5_on, '#,###'), 0) as qty</if>
+			 </if>
+			 , a.reg_dttm   as regDttm
+			 , a.reg_user   as regUser
+			 , a.mod_dttm   as modDttm
+			 , a.mod_user   as modUser
+		  from ZM_SALES_RESULT_EX a
+		 where 1 = 1
+		   and a.zemos_idx = #{zemosIdx}
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   and a.store_seq  = #{storeSeq}
+		   <if test='unitYn == "1"'> and a.unit_seq1 = #{unitSeq}</if>
+		   <if test='unitYn == "2"'> and a.unit_seq2 = #{unitSeq}</if>
+		   <if test='unitYn == "3"'> and a.unit_seq3 = #{unitSeq}</if>
+		   <if test='unitYn == "4"'> and a.unit_seq4 = #{unitSeq}</if>
+		   <if test='unitYn == "5"'> and a.unit_seq5 = #{unitSeq}</if>
+		   AND concat(a.year,'-',a.mm,'-',a.dd) <![CDATA[ >= ]]>  #{startDay}
+				AND concat(a.year,'-',a.mm,'-',a.dd)   <![CDATA[ <= ]]>  #{endDay}
+		 order by concat(a.year,'-',a.mm,'-',a.dd),a.item_seq
+	</select>
+	
+	<!-- 합계 기준 List -->
+	<select id="selectSumTotalList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	/* zenielm.zemos3.family.sales2.sales2Result.selectSumTotalList */
+	    SELECT a.unitNm
+				,a.offYn
+				,a.onYn
+				,a.onoffNM
+				,a.totSumResult
+		  FROM (
+				SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+						 , '0'      AS onYn
+						 , CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit1_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn,'0') <![CDATA[ <> ]]> 'Y'	        
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+						 , CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit1_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq1 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , '0' AS onYn
+						 , '소계' AS onoffNM
+						 ,ifnull(sum(b.amt), 0)+ifnull(sum(b.amt_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit1_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn,'0') <![CDATA[ <> ]]> 'Y'
+				 AND IFNULL(b.request_yn_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+						 , '0'      AS onYn
+						 , CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt2), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit2_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn2,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>       
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+						 , CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt2_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit2_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn2_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>       
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq2 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , '0' AS onYn
+						 , '소계' AS onoffNM
+						 ,ifnull(sum(b.amt2), 0)+ifnull(sum(b.amt2_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit2_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn2,'0') <![CDATA[ <> ]]> 'Y'
+				 AND IFNULL(b.request_yn2_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+						 , '0'      AS onYn
+						 , CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt3), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit3_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn3,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+						 , CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt3_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit3_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn3_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>       
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq3 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , '0' AS onYn
+						 , '소계' AS onoffNM
+						 ,ifnull(sum(b.amt3), 0)+ifnull(sum(b.amt3_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit3_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn3,'0') <![CDATA[ <> ]]> 'Y'
+				 AND IFNULL(b.request_yn3_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+						 , '0'      AS onYn
+						 , CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt4), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit4_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn4,'0') <![CDATA[ <> ]]> 'Y'
+				<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>      
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+						 , CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt4_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit4_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn4_on,'0') <![CDATA[ <> ]]> 'Y'
+				<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>	        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq4 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , '0' AS onYn
+						 , '소계' AS onoffNM
+						 ,ifnull(sum(b.amt4), 0)+ifnull(sum(b.amt4_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit4_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn4,'0') <![CDATA[ <> ]]> 'Y'
+				 AND IFNULL(b.request_yn4_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , CASE WHEN a.off_yn = 'Y' THEN a.off_yn ELSE '0' END AS offYn
+						 , '0'      AS onYn
+						 , CASE WHEN a.off_yn = 'Y' THEN '오프라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt5), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit5_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn5,'0') <![CDATA[ <> ]]> 'Y'
+				<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>	        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				 UNION ALL 
+				 SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , CASE WHEN a.on_yn = 'Y' THEN a.on_yn ELSE '0' END AS onYn
+						 , CASE WHEN a.on_yn = 'Y' THEN '온라인' ELSE '0' END AS onoffNM
+						 ,ifnull(sum(b.amt5_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit5_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn5_on,'0') <![CDATA[ <> ]]> 'Y'
+				<if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'
+				   UNION ALL
+				   SELECT (SELECT d.unit_nm from ZM_SALES_UNIT d WHERE d.unit_seq = c.unit_seq5 AND d.zemos_idx = c.zemos_idx) as unitNm
+						 , '0' AS offYn
+						 , '0' AS onYn
+						 , '소계' AS onoffNM
+						 ,ifnull(sum(b.amt5), 0)+ifnull(sum(b.amt5_on), 0) AS totSumResult
+				 FROM ZM_SALES_STORE a
+				 JOIN ZM_SALES_STORE_DETAIL c ON a.zemos_idx = c.zemos_idx AND a.store_seq = c.store_seq AND ifnull(c.unit5_yn,'N') ='Y'
+				 LEFT JOIN ZM_SALES_RESULT_EX b ON a.zemos_idx = b.zemos_idx
+				 AND a.wrkplc_idx = b.wrkplc_idx
+				 AND a.store_seq = b.store_seq	
+				 AND IFNULL(b.request_yn5,'0') <![CDATA[ <> ]]> 'Y'
+				 AND IFNULL(b.request_yn5_on,'0') <![CDATA[ <> ]]> 'Y'
+				 <if test='startDay != null and startDay != ""'> 
+			and concat(b.year,'-',b.mm,'-',b.dd) <![CDATA[ >= ]]> #{startDay} 
+				and concat(b.year,'-',b.mm,'-',b.dd)  <![CDATA[ <= ]]> #{endDay}
+			</if>        
+				 where 1 = 1
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.store_seq = #{storeSeq}
+				   </if>
+				   and a.use_yn = 'Y'				 
+				 ) a
+		 WHERE 1=1
+		   AND a.unitNm IS NOT NULL	
+	</select>
+	
+	<!-- 실적등록 엑셀 다운로드 -->
+	<select id="selectResultExcelDown" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResultExcelDown */
+		   SELECT a.storeNm
+				 ,a.itemNm
+				 ,a.unitSeq
+				 ,a.unitNm
+				 ,a.onoffNM
+				 ,a.amt
+				 ,a.qty
+				 ,SUBSTRING(b.date,1,4) AS year
+				 ,SUBSTRING(b.date,6,2) AS mm
+				 ,SUBSTRING(b.date,9,2) AS dd
+				 ,b.date
+				 ,a.requestYn
+		   FROM (
+				   SELECT a.store_nm AS storeNm
+						  ,b.item_nm AS itemNm
+						  ,c.unit_seq AS unitSeq					
+						  ,c.unit_nm AS unitNm
+						  ,#{onoffNM} AS onoffNM
+						  <if test='unitYn == "1"'>
+						    <if test='onoffNM == "오프라인"'>
+						  	,IFNULL(SUM(d.amt),0) AS amt
+						  	,IFNULL(SUM(d.qty),0) AS qty
+						  	</if>
+						  	<if test='onoffNM == "온라인"'>
+						 	 ,IFNULL(SUM(d.amt_on),0) AS amt
+						 	 ,IFNULL(SUM(d.qty_on),0) AS qty
+						  	</if>
+						  </if>
+						  <if test='unitYn == "2"'>
+						    <if test='onoffNM == "오프라인"'>
+						  	,IFNULL(SUM(d.amt2),0) AS amt
+						  	,IFNULL(SUM(d.qty2),0) AS qty
+						  	</if>
+						  	<if test='onoffNM == "온라인"'>
+						 	 ,IFNULL(SUM(d.amt2_on),0) AS amt
+						 	 ,IFNULL(SUM(d.qty2_on),0) AS qty
+						  	</if>
+						  </if>
+						  <if test='unitYn == "3"'>
+						    <if test='onoffNM == "오프라인"'>
+						  	,IFNULL(SUM(d.amt2),0) AS amt
+						  	,IFNULL(SUM(d.qty2),0) AS qty
+						  	</if>
+						  	<if test='onoffNM == "온라인"'>
+						 	 ,IFNULL(SUM(d.amt2_on),0) AS amt
+						 	 ,IFNULL(SUM(d.qty2_on),0) AS qty
+						  	</if>
+						  </if>
+						  <if test='unitYn == "4"'>
+						    <if test='onoffNM == "오프라인"'>
+						  	,IFNULL(SUM(d.amt2),0) AS amt
+						  	,IFNULL(SUM(d.qty2),0) AS qty
+						  	</if>
+						  	<if test='onoffNM == "온라인"'>
+						 	 ,IFNULL(SUM(d.amt2_on),0) AS amt
+						 	 ,IFNULL(SUM(d.qty2_on),0) AS qty
+						  	</if>
+						  </if>
+						  <if test='unitYn == "5"'>
+						    <if test='onoffNM == "오프라인"'>
+						  	,IFNULL(SUM(d.amt2),0) AS amt
+						  	,IFNULL(SUM(d.qty2),0) AS qty
+						  	</if>
+						  	<if test='onoffNM == "온라인"'>
+						 	 ,IFNULL(SUM(d.amt2_on),0) AS amt
+						 	 ,IFNULL(SUM(d.qty2_on),0) AS qty
+						  	</if>
+						  </if>
+						  ,d.request_yn as requestYn
+					FROM ZM_SALES_STORE a
+					LEFT OUTER JOIN ZM_SALES_ITEM b ON a.zemos_idx = b.zemos_idx
+					AND a.wrkplc_idx = b.wrkplc_idx
+					JOIN ZM_SALES_STORE_DETAIL_ITEM e ON a.zemos_idx = e.zemos_idx
+					AND a.wrkplc_idx = e.wrkplc_idx
+					AND b.item_seq = e.item_seq
+					AND e.use_yn ='Y'
+					<if test='storeSeq != null and storeSeq != ""'>
+				    AND e.store_seq = #{storeSeq}
+				   </if>
+					LEFT OUTER JOIN ZM_SALES_UNIT c ON a.zemos_idx = c.zemos_idx
+					AND a.wrkplc_idx = c.wrkplc_idx
+					AND c.use_yn = 'Y'
+					<if test='unitSeq != null and unitSeq != ""'>
+				    AND c.unit_seq = #{unitSeq}
+				    </if>
+					LEFT OUTER JOIN ZM_SALES_RESULT_EX d ON a.zemos_idx = d.zemos_idx
+					AND a.wrkplc_idx = d.wrkplc_idx
+					AND a.store_seq = d.store_seq
+					AND IFNULL(d.request_yn,'0') <![CDATA[ <> ]]> 'Y'
+					AND concat(d.year,'-',d.mm,'-',d.dd) BETWEEN #{startDay} AND #{endDay}
+					WHERE 1=1 
+				   <if test='zemosIdx != null and zemosIdx != ""'>
+				   AND a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   AND a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   AND a.store_seq = #{storeSeq}
+				   </if>
+				   <if test='onoffNM == "온라인"'> AND a.on_yn = 'Y' </if>
+				   <if test='onoffNM == "오프라인"'> AND a.off_yn = 'Y'</if> 
+				   GROUP BY b.item_nm) a,
+			   (
+			   	SELECT GenDate AS date FROM 
+		        (SELECT ADDDATE('2000-01-01',t4*10000 + t3*1000 + t2*100 + t1*10 + t0) GenDate FROM
+		        (SELECT 0 t0 UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) t0,
+		        (SELECT 0 t1 UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) t1,
+		        (SELECT 0 t2 UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) t2,
+		        (SELECT 0 t3 UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) t3,
+		        (SELECT 0 t4 UNION SELECT 1 UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9) t4) v
+				WHERE GenDate BETWEEN #{startDay} AND #{endDay}
+			   ) b
+			   where 1=1
+			   and IFNULL(a.requestYn,'0') <![CDATA[ <> ]]> 'Y'
+		   ORDER BY b.date, a.storeNm, a.itemNm
+	</select>
+	
+	<!-- 매장명이 ZM_SALES_STORE 테이블에 등록 매장과 엑셀의 매장이 맞는지 체크. -->
+	<select id="selectStoreNm" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectStoreNm */
+		   select store_nm as storeNm
+		        , store_seq as storeSeq
+		   from ZM_SALES_STORE
+		   where 1 = 1
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and use_yn = 'Y'
+		   order by store_nm
+	</select>
+	
+	<!-- 품목명이 ZM_SALES_STORE 테이블에 등록 품목과 엑셀의 품목이 맞는지 체크. -->
+	<select id="selectitemNm" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectitemNm */
+		   select a.item_nm as itemNm
+		        , a.item_seq as itemSeq
+		   from ZM_SALES_ITEM a
+		   where 1 = 1
+		   and a.zemos_idx = #{zemosIdx}
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   and a.use_yn = 'Y'
+		   and a.item_seq  IN (select b.item_seq FROM ZM_SALES_STORE_DETAIL_ITEM b
+ 							    where b.zemos_idx= #{zemosIdx}
+ 							      and b.wrkplc_idx = #{wrkplcIdx} 
+ 							      <if test='storeSeq != null and storeSeq != ""'>
+		   							and b.store_seq = #{storeSeq}
+		   						  </if> 
+ 							      and b.use_yn = 'Y' )
+		   order by a.item_nm
+	</select>
+	
+	<!-- 품목명으로 SEQ 계산 -->
+	<select id="selectitemList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectitemList */
+		   select a.item_nm as itemNm
+		        , a.item_seq as itemSeq
+		   from ZM_SALES_ITEM a
+		   where 1 = 1
+		   and a.zemos_idx = #{zemosIdx}
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   and a.use_yn = 'Y'
+		   and a.item_seq  IN (select b.item_seq FROM ZM_SALES_STORE_DETAIL_ITEM b
+ 							    where b.zemos_idx= #{zemosIdx}
+ 							      and b.wrkplc_idx = #{wrkplcIdx} 
+ 							      <if test='storeSeq != null and storeSeq != ""'>
+		   							and b.store_seq = #{storeSeq}
+		   						  </if> 
+ 							      and b.use_yn = 'Y' )
+ 		   and a.item_nm = 	#{itemName}				      
+		   order by a.item_nm
+	</select>
+	
+	<!-- unit의 SEQ 계산. -->
+	<select id="selectUnitList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectUnitList */		 
+		SELECT case when a.unit_seq1 <![CDATA[ <> ]]> 0 then '1'
+						when a.unit_seq2 <![CDATA[ <> ]]> 0 then '2'
+						when a.unit_seq3 <![CDATA[ <> ]]> 0 then '3'
+						when a.unit_seq4 <![CDATA[ <> ]]> 0 then '4'
+						when a.unit_seq5 <![CDATA[ <> ]]> 0 then '5'
+				 ELSE 0 END unitGubun
+			  ,case when a.unit_seq1 <![CDATA[ <> ]]> 0 then a.unit_seq1
+		 	  	    when a.unit_seq2 <![CDATA[ <> ]]> 0 then a.unit_seq2
+		 	    	when a.unit_seq3 <![CDATA[ <> ]]> 0 then a.unit_seq3
+		 	    	when a.unit_seq4 <![CDATA[ <> ]]> 0 then a.unit_seq4
+		 	    	when a.unit_seq5 <![CDATA[ <> ]]> 0 then a.unit_seq5
+		 		 ELSE 0 END unitSeq 
+		FROM (
+				SELECT case when ifnull(a.unit1_yn,'N') ='Y' then (SELECT ifnull(unit_seq,0) FROM ZM_SALES_UNIT 
+																	WHERE zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND unit_nm = #{unitName} AND unit_seq = a.unit_seq1)
+						 ELSE '0' END AS unit_seq1
+						 ,case when ifnull(a.unit2_yn,'N') ='Y' then (SELECT ifnull(unit_seq,0) FROM ZM_SALES_UNIT 
+						 											   WHERE zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND unit_nm = #{unitName} AND unit_seq = a.unit_seq2)
+						 ELSE '0' END AS unit_seq2
+						 ,case when ifnull(a.unit3_yn,'N') ='Y' then (SELECT ifnull(unit_seq,0) FROM ZM_SALES_UNIT 
+						 											   WHERE zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND unit_nm = #{unitName} AND unit_seq = a.unit_seq3)
+						 ELSE '0' END AS unit_seq3
+						 ,case when ifnull(a.unit4_yn,'N') ='Y' then (SELECT ifnull(unit_seq,0) FROM ZM_SALES_UNIT 
+						 											   WHERE zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND unit_nm = #{unitName} AND unit_seq = a.unit_seq4)
+						 ELSE '0' END AS unit_seq4
+						 ,case when ifnull(a.unit5_yn,'N') ='Y' then (SELECT ifnull(unit_seq,0) FROM ZM_SALES_UNIT 
+						 											   WHERE zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND unit_nm = #{unitName} AND unit_seq = a.unit_seq5)
+						 ELSE '0' END AS unit_seq5
+				 from ZM_SALES_STORE_DETAIL a 
+				where 1 = 1
+				   AND a.zemos_idx = #{zemosIdx}
+				   AND a.wrkplc_idx = #{wrkplcIdx}
+				   <if test='storeNm != null and storeNm != ""'>
+				   AND a.store_seq = (SELECT b.store_seq FROM ZM_SALES_STORE b 
+									   WHERE b.zemos_idx = #{zemosIdx} AND b.wrkplc_idx = #{wrkplcIdx} AND b.store_nm =#{storeNm})
+				   </if>				   
+					) a
+	</select>
+	
+	<!-- 목표 등록 여부 count -->
+	<select id="selectresulCnt01" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectresulCnt01 */
+		       SELECT COUNT(DISTINCT a.STORE_SEQ) AS goalCnt
+					FROM ZM_SALES_RESULT_EX a
+					WHERE 1=1
+					<if test='zemosIdx != null and zemosIdx != ""'>
+				  	 and a.zemos_idx = #{zemosIdx}
+				   </if>
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				     and a.wrkplc_idx = #{wrkplcIdx}
+				   </if>
+				   <if test='gbn == "O"'>
+					 and a.store_seq = #{storeSeq}
+				   </if>	 
+				   <if test='year != null and year != ""'> 
+				     and a.year = #{year}
+				   </if>
+				   <if test='mm != null and mm != ""'> 
+				     and a.mm = #{mm}
+				   </if>
+				   <if test='dd != null and dd != ""'> 
+				     and a.dd = #{dd}
+				   </if>
+				   <if test='itemSeq != null and itemSeq != ""'> 
+				   and a.item_seq =#{itemSeq}
+				   </if>
+				   and a.request_yn ='N'			   
+	</select>
+	
+	<!-- 실적 Mng, Detail count -->
+	<select id="resultMngAndDetailCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.resultMngAndDetailCnt */
+		SELECT 
+		COUNT(a.result_seq) as resultCnt
+		, a.result_seq as resultSeq
+		, (SELECT COUNT(result_detail_seq) FROM ZM_SALES_RESULT_DETAIL WHERE item_seq = #{itemSeq} AND result_seq = a.result_seq) detailCnt
+		FROM ZM_SALES_RESULT_MNG a
+		WHERE 1=1 
+		AND a.result_dt = #{resultDt}
+		AND a.store_seq = #{storeSeq}
+	</select>
+	
+	<!-- resultHistoryMng -->
+	<select id="resultHistoryMng" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Result.resultHistoryMng */
+		SELECT
+		COUNT(*) cnt 
+		FROM ZM_SALES_HISTORY_MNG
+		WHERE 1=1 
+		AND result_seq = 24684 
+		AND result_change_seq = (SELECT MAX(result_change_seq) FROM ZM_SALES_HISTORY_MNG WHERE result_seq = 24684)
+		AND request_yn = 'W'
+	</select>
+	
+	
+	
+	<!-- 실적엑셀등록 insert -->
+	<insert id="insertResult" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="goal_seq">
+		/* zenielm.zemos3.family.sales2.sales2Result.insertResult */
+		insert into ZM_SALES_RESULT_EX
+		(
+			  zemos_idx
+			, wrkplc_idx
+			, store_seq
+			, item_seq
+			, year
+			, mm
+			, dd 
+			<if test='unitGubun == "1"'>
+			, unit_seq1
+				<if test='onoffName == "오프라인"'> , amt ,qty</if>
+				<if test='onoffName == "온라인"'> , amt_on ,qty_on</if>
+			</if>
+			<if test='unitGubun == "2"'>
+			, unit_seq2
+				<if test='onoffName == "오프라인"'> , amt2 ,qty2</if>
+				<if test='onoffName == "온라인"'> , amt2_on ,qty2_on</if>
+			</if>
+			<if test='unitGubun == "3"'>
+			, unit_seq3
+				<if test='onoffName == "오프라인"'> , amt3 ,qty3</if>
+				<if test='onoffName == "온라인"'> , amt3_on ,qty3_on</if>
+			</if>
+			<if test='unitGubun == "4"'>
+			, unit_seq4
+				<if test='onoffName == "오프라인"'> , amt4 ,qty4</if>
+				<if test='onoffName == "온라인"'> , amt4_on ,qty4_on</if>
+			</if>
+			<if test='unitGubun == "5"'>
+			, unit_seq5
+				<if test='onoffName == "오프라인"'> , amt5 ,qty5</if>
+				<if test='onoffName == "온라인"'> , amt5_on ,qty5_on</if>
+			</if>
+			, request_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user		
+		)
+		values
+		(
+			  #{zemosIdx}
+			, #{wrkplcIdx}
+			<if test='gbn == "O"'>
+			, #{storeSeq}
+			</if>
+			, #{itemSeq}
+			, #{year}
+			, #{mm}
+			, #{dd}
+			, #{unitSeq}
+			, #{amt}
+			, #{qty}
+			, 'N'
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<!-- 실적엑셀등록 update -->
+	<update id="resultUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.resultUpdate */
+		update ZM_SALES_RESULT_EX
+		   set 
+		   <if test='unitGubun == "1"'>
+		   	<if test='onoffName == "오프라인"'>
+		   	   amt = replace(#{amt}, ',', '')
+		   	  ,qty = replace(#{qty}, ',', '')
+		   	  ,unit_seq1 = #{unitSeq} 
+		   	</if> 
+		   	<if test='onoffName == "온라인"'>
+		   	   amt_on = replace(#{amt}, ',', '')
+		   	  ,qty_on = replace(#{qty}, ',', '')
+		   	  ,unit_seq1 = #{unitSeq} 
+		   	</if>  
+		   </if>
+		   <if test='unitGubun == "2"'>
+		   	<if test='onoffName == "오프라인"'>
+		   	   amt2 = replace(#{amt}, ',', '')
+		   	  ,qty2 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq2 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffName == "온라인"'>
+		   	   amt2_on = replace(#{amt}, ',', '')
+		   	  ,qty2_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq2 = #{unitSeq}
+		   	</if>  
+		   </if>
+		   <if test='unitGubun == "3"'>
+		   	<if test='onoffName == "오프라인"'>
+		   	   amt3 = replace(#{amt}, ',', '')
+		   	  ,qty3 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq3 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffName == "온라인"'>
+		   	   amt3_on = replace(#{amt}, ',', '')
+		   	  ,qty3_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq3 = #{unitSeq}
+		   	</if>  
+		   </if>
+		   <if test='unitGubun == "4"'>
+		   	<if test='onoffName == "오프라인"'>
+		   	   amt4 = replace(#{amt}, ',', '')
+		   	  ,qty4 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq4 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffName == "온라인"'>
+		   	   amt4_on = replace(#{amt}, ',', '')
+		   	  ,qty4_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq4 = #{unitSeq}
+		   	</if>  
+		   </if>
+		   <if test='unitGubun == "5"'>
+		   	<if test='onoffName == "오프라인"'>
+		   	   amt5 = replace(#{amt}, ',', '')
+		   	  ,qty5 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq5 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffName == "온라인"'>
+		   	   amt5_on = replace(#{amt}, ',', '')
+		   	  ,qty5_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq5 = #{unitSeq}
+		   	</if>  
+		   </if>	   
+		     , mod_dttm = now()
+		     , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and zemos_idx  = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq  = #{storeSeq}
+		   and year       = #{year}
+		   and mm         = #{mm}
+		   and dd         = #{dd}
+		   and item_seq   = #{itemSeq}
+		   and request_yn = 'N'
+	</update>
+	<!-- 실적엑셀등록 requestYn update -->
+	<update id="resultExRequestYnUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.resultExRequestYnUpdate */
+		UPDATE ZM_SALES_RESULT_EX
+		SET 
+		<if test='requestYn != "" and requestYn != null'>
+		request_yn=#{requestYn}
+		</if>
+		<if test='requestYnOn != "" and requestYnOn != null'>
+		request_yn_on=#{requestYnOn}
+		</if>
+		<if test='requestYn2 != "" and requestYn2 != null'>
+		request_yn2=#{requestYn2}
+		</if>
+		<if test='requestYn2On != "" and requestYn2On != null'>
+		request_yn2_on=#{requestYn2On}
+		</if>
+		<if test='requestYn3 != "" and requestYn3 != null'>
+		request_yn3=#{requestYn3}
+		</if>
+		<if test='requestYn3On != "" and requestYn3On != null'>
+		request_yn3_on=#{requestYn3On}
+		</if>
+		<if test='requestYn4 != "" and requestYn4 != null'>
+		request_yn4=#{requestYn4}
+		</if>
+		<if test='requestYn4On != "" and requestYn4On != null'>
+		request_yn4_on=#{requestYn4On}
+		</if>
+		<if test='requestYn5 != "" and requestYn5 != null'>
+		request_yn5=#{requestYn5}
+		</if>
+		<if test='requestYn5On != "" and requestYn5On != null'>
+		request_yn5_on=#{requestYn5On}
+		</if>
+		, mod_dttm=NOW()
+		, mod_user=#{modUserSeq}
+		WHERE result_ex_seq=#{resultexSeq}
+	</update>
+	
+	<!-- 실적엑셀등록상세 update -->
+	<update id="ResultDetailUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.ResultDetailUpdate */
+		update ZM_SALES_RESULT_EX
+		   set 
+		   <if test='unitYn == "1"'>
+		   	<if test='onoffNM == "오프라인"'>
+		   	   amt = replace(#{amt}, ',', '')
+		   	  ,qty = replace(#{qty}, ',', '')
+		   	  ,unit_seq1 = #{unitSeq} 
+		   	</if> 
+		   	<if test='onoffNM == "온라인"'>
+		   	   amt_on = replace(#{amt}, ',', '')
+		   	  ,qty_on = replace(#{qty}, ',', '')
+		   	  ,unit_seq1 = #{unitSeq} 
+		   	</if>  
+		   </if>
+		   <if test='unitYn == "2"'>
+		   	<if test='onoffNM == "오프라인"'>
+		   	   amt2 = replace(#{amt}, ',', '')
+		   	  ,qty2 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq2 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffNM == "온라인"'>
+		   	   amt2_on = replace(#{amt}, ',', '')
+		   	  ,qty2_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq2 = #{unitSeq}
+		   	</if>  
+		   </if>
+		   <if test='unitYn == "3"'>
+		   	<if test='onoffNM == "오프라인"'>
+		   	   amt3 = replace(#{amt}, ',', '')
+		   	  ,qty3 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq3 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffNM == "온라인"'>
+		   	   amt3_on = replace(#{amt}, ',', '')
+		   	  ,qty3_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq3 = #{unitSeq}
+		   	</if>  
+		   </if>
+		   <if test='unitYn == "4"'>
+		   	<if test='onoffNM == "오프라인"'>
+		   	   amt4 = replace(#{amt}, ',', '')
+		   	  ,qty4 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq4 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffNM == "온라인"'>
+		   	   amt4_on = replace(#{amt}, ',', '')
+		   	  ,qty4_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq4 = #{unitSeq}
+		   	</if>  
+		   </if>
+		   <if test='unitYn == "5"'>
+		   	<if test='onoffNM == "오프라인"'>
+		   	   amt5 = replace(#{amt}, ',', '')
+		   	  ,qty5 = replace(#{qty}, ',', '') 
+		   	  ,unit_seq5 = #{unitSeq}
+		   	</if> 
+		   	<if test='onoffNM == "온라인"'>
+		   	   amt5_on = replace(#{amt}, ',', '')
+		   	  ,qty5_on = replace(#{qty}, ',', '') 
+		   	  ,unit_seq5 = #{unitSeq}
+		   	</if>  
+		   </if>	   
+		     , mod_dttm = now()
+		     , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and zemos_idx  = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq  = #{storeSeq}
+		   and result_ex_seq  = #{resultexSeq}
+		   and year       = #{year}
+		   and mm         = #{mm}
+		   and dd         = #{dd}
+		   and item_seq   = #{itemSeq}
+		   and request_yn = 'N'
+	</update>
+	
+</mapper>

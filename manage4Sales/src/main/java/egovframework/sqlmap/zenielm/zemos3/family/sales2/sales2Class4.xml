@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2Class4">
+
+	<!-- 제모스 판매관리 분류3 XML -->
+	
+	<!-- 분류3 count -->
+	<select id="selectSales2Class4Cnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Class4.selectSales2Class4Cnt */
+		select count(*) AS cnt
+		  from ZM_SALES_CLASS4
+		 where 1 = 1
+		   <!--
+		   <if test='class4Seq != null and class4Seq != ""'>
+		   and class4_seq = #{class4Seq}
+		   </if>
+		   -->
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='class4Nm != null and class4Nm != ""'>
+		   and class4_nm like CONCAT(CONCAT('%', #{class4Nm}), '%')
+		   </if>
+		   <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if>
+	</select>
+	
+	<!-- 분류1 list -->
+	<select id="selectSales2Class4" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Class1.selectSales2Class4 */
+		select class4_seq as class4Seq
+		     , zemos_idx  as zemosIdx
+		     , class4_nm  as class4Nm
+		     , use_yn     as useYn
+		     , reg_dttm   as regDttm
+		     , reg_user   as regUser
+		     , mod_dttm   as modDttm
+		     , mod_user   as modUser
+		  from ZM_SALES_CLASS4
+		 where 1 = 1
+		   <if test='class4Seq != null and class4Seq != ""'>
+		   and class4_seq = #{class4Seq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='class4Nm != null and class4Nm != ""'>
+		   and class4_nm like CONCAT(CONCAT('%', #{class4Nm}), '%')
+		   </if>
+		   <if test='selectUseYn != null and selectUseYn != ""'>
+		   and use_yn = #{selectUseYn}
+		   </if>
+		 order by use_yn desc, class4_nm asc
+	</select>
+	
+	<select id="selectClass4NameList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Class4.selectClass4NameList */
+		select zemos_idx as zemosIdx
+		     , class4_use_nm as class4UseNm
+		     , use_yn4 as useYn
+		  from ZM_SALES_CLASS4_NM
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		LIMIT 1
+	</select>
+	
+	<!-- 분류1 list -->
+	<select id="selectSales2Class04" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Class1.selectSales2Class04 */
+		select class4_seq as class4Seq
+		     , zemos_idx  as zemosIdx
+		     , class4_nm  as class4Nm
+		     , use_yn     as useYn
+		     , reg_dttm   as regDttm
+		     , reg_user   as regUser
+		     , mod_dttm   as modDttm
+		     , mod_user   as modUser
+		  from ZM_SALES_CLASS4
+		 where 1 = 1
+		   <if test='class4Seq != null and class4Seq != ""'>
+		   and class4_seq = #{class4Seq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='class4Nm != null and class4Nm != ""'>
+		   and class4_nm like CONCAT(CONCAT('%', #{class4Nm}), '%')
+		   </if>
+		   and use_yn = 'Y'
+		 order by use_yn desc, class4_nm asc
+	</select>
+	
+	<!-- 분류1 insert -->
+	<insert id="class4Insert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="class4_seq">
+		/* zenielm.zemos3.family.sales2.sales2Class4.class4Insert */
+		insert into ZM_SALES_CLASS4
+		(
+			class4_seq
+			, zemos_idx
+			, wrkplc_idx
+			, class4_nm
+			, use_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		) values (
+			#{class4_seq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{class4Nm}
+			, #{useYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<!-- 분류1 update -->
+	<update id="class4Update" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Class4.class4Update */
+		update ZM_SALES_CLASS4
+		   set class4_nm = #{class4Nm}
+			 , use_yn = #{useYn}
+			 , mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and class4_seq = #{class4Seq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	
+</mapper>

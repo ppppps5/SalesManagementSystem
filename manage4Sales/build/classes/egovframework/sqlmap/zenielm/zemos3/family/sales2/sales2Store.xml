@@ -1,0 +1,592 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2Store">
+
+	<!-- 제모스 판매관리 매장 XML --> 
+
+	<!-- 매장 count -->
+	<select id="selectStoreCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectStoreCnt */
+		select count(*) as cnt
+		  from ZM_SALES_STORE
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeNm != null and storeNm != ""'>
+		   and store_nm = #{storeNm}
+		   </if>
+		   <!-- <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if> -->
+	</select>
+	
+	<!-- onoff count -->
+	<select id="onOffCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Store.onOffCnt */
+		SELECT COUNT(*)
+		FROM 
+			(SELECT DISTINCT a.onoffYn
+         	,a.onoffNm
+         	FROM 
+         		(SELECT case when on_yn = 'Y' then '온라인'
+                ELSE '' end AS onoffNm
+                ,case when on_yn = 'Y' then '1'
+                Else '0' end AS  onoffYn
+                FROM ZM_SALES_STORE
+                WHERE 1=1
+                and zemos_idx = #{zemosIdx} 
+                and wrkplc_idx = #{wrkplcIdx} 
+                AND store_seq = #{storeSeq}            
+                AND on_yn ='Y'         
+                UNION ALL         
+                SELECT case when off_yn = 'Y' then '오프라인'
+                ELSE '' end AS onoffNm               
+                ,case when off_yn = 'Y' then '0'               
+                Else '1' end AS  onoffYn         
+                FROM ZM_SALES_STORE         
+                WHERE 1=1                
+                and zemos_idx = #{zemosIdx} 
+                and wrkplc_idx = #{wrkplcIdx}  
+                AND store_seq =  #{storeSeq}   
+		        AND off_yn ='Y') 
+		        a 
+		)b
+	</select>
+	
+	<select id="selectStore" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectStore */
+		select count(*) as cnt
+		  from ZM_SALES_STORE
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeNm != null and storeNm != ""'>
+		   and store_nm = #{storeNm}
+		   </if>
+		   <!-- <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if> -->
+	</select>
+	
+	<!-- 제모스 판매관리 매장관리자  -->
+	<select id="storeuserList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeuserList */
+		  SELECT user_sabun as usersabun
+		         ,user_name as username
+			FROM ZM_ZEMOS_EMP
+			WHERE 1=1
+			<if test='zemosIdx != null and zemosIdx != ""'>
+			AND ZEMOS_IDX = #{zemosIdx}
+			</if>
+			<if test='wrkplcIdx != null and wrkplcIdx != ""'>
+			AND WRKPLC_idx = #{wrkplcIdx}
+			</if>
+			AND DELETE_yn = 'N'
+			AND USE_YN = 'Y'
+			AND OUT_USER_YN = 'N'
+			AND AUTH_SE ='11000'
+		order by user_name, user_sabun
+	</select>
+	
+	<select id="selectStoreList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectStoreList */
+		select store_seq as storeSeq
+			 , zemos_idx as zemosIdx
+			 , store_nm as storeNm
+			 , class1 as class1
+			 , class2 as class2
+			 , class3 as class3
+			 , sabun as sabun
+			 , sabun2 as sabun2
+			 , class_yn as classyn
+			 , use_yn as useYn
+			 , reg_dttm as regDttm 
+			 , reg_user as tegUser
+			 , mod_dttm as modDttm
+			 , mod_user as modUser
+		  from ZM_SALES_STORE
+		 where 1 = 1
+		   <!-- <if test='detail == "detail" and storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if> -->
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeNm != null and storeNm != ""'>
+		   and store_nm like CONCAT(CONCAT('%', #{storeNm}), '%')
+		   </if>
+		   <if test='selectUseYn != null and selectUseYn != ""'>
+		   and use_yn = #{selectUseYn}
+		   </if>
+		 order BY use_yn desc,class_yn desc,store_nm
+	</select>
+	
+	<select id="selectBoxStoreList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectBoxStoreList */
+		select a.store_seq as storeSeq
+			 , a.zemos_idx as zemosIdx
+			 , a.store_nm as storeNm
+			 , a.class_yn as classyn
+			 , a.use_yn as useYn
+			 , (SELECT c.upload_yn from ZM_SALE_STORE_SM c where a.store_seq = c.store_seq AND sabun = #{salesabun}) AS uploadYn
+			 , (SELECT c.approval_yn from ZM_SALE_STORE_SM c where a.store_seq = c.store_seq AND sabun = #{salesabun}) AS approvalYn
+			 , a.reg_dttm as regDttm
+			 , a.reg_user as tegUser
+			 , a.mod_dttm as modDttm
+			 , a.mod_user as modUser
+			 , b.unit1_yn as unit1Yn
+		 	 , b.unit2_yn as unit2Yn
+		 	 , b.unit3_yn as unit3Yn
+		 	 , b.unit4_yn as unit4Yn
+		 	 , b.unit5_yn as unit5Yn
+		  from ZM_SALES_STORE a, ZM_SALES_STORE_DETAIL b
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='salesabun != null and salesabun != ""'>
+		   AND a.store_seq in(select store_seq from ZM_SALE_STORE_SM WHERE 1=1 and sabun = #{salesabun} )
+		   </if>
+		   and a.use_yn = 'Y'
+		   and  a.store_seq = b.store_seq
+		 order by store_nm
+	</select>
+	
+	<select id="selectAppStoreList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectAppStoreList */
+		select a.store_seq as storeSeq
+			 , a.zemos_idx as zemosIdx
+			 , a.store_nm as storeNm
+			 , a.use_yn as useYn
+			 , (SELECT c.upload_yn from ZM_SALE_STORE_SM c where a.store_seq = c.store_seq AND sabun = #{salesabun}) AS uploadYn
+			 , (SELECT c.approval_yn from ZM_SALE_STORE_SM c where a.store_seq = c.store_seq AND sabun = #{salesabun}) AS approvalYn
+			 , a.reg_dttm as regDttm
+			 , a.reg_user as tegUser
+			 , a.mod_dttm as modDttm
+			 , a.mod_user as modUser
+			 , b.unit1_yn as unit1Yn
+		 	 , b.unit2_yn as unit2Yn
+		 	 , b.unit3_yn as unit3Yn
+		 	 , b.unit4_yn as unit4Yn
+		 	 , b.unit5_yn as unit5Yn
+		  from ZM_SALES_STORE a, ZM_SALES_STORE_DETAIL b
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='salesabun != null and salesabun != ""'>
+		   AND a.store_seq in(select store_seq from ZM_SALE_STORE_SM WHERE 1=1 and sabun = #{salesabun} )
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   AND a.store_seq = #{storeSeq}
+		   </if>
+		   and a.use_yn = 'Y'
+		   and  a.store_seq = b.store_seq
+		 order by store_nm
+	</select>
+	
+	<insert id="store2DetailInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="store_detail_seq">
+		/* zenielm.zemos3.family.sales2.sales2Store.store2DetailInsert */
+		insert into ZM_SALES_STORE_DETAIL
+		(
+			store_detail_seq
+			, store_seq
+			, zemos_idx
+			, wrkplc_idx
+			, file_yn
+			, unit_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		values
+		(
+			#{store_detail_seq}
+			, (SELECT MAX(store_seq)+1 FROM ZM_SALES_STORE)
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{fileYn}
+			, #{unitYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+		<selectKey resultType="int" keyProperty="store_detail_seq" order="AFTER">
+        	SELECT LAST_INSERT_ID()
+    	</selectKey>
+	</insert>
+	
+	
+	
+	<!-- 매장 insert -->
+	<insert id="storeInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="store_seq">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeInsert */
+		insert into ZM_SALES_STORE
+		(
+			store_seq
+			, zemos_idx
+			, wrkplc_idx
+			, store_nm
+			<if test='classyn != null and classyn != "" and classyn == "Y"'>
+			, class1
+			, class2
+			, class3
+			</if>
+			, sabun
+			, sabun2
+			, class_yn
+			, use_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		values
+		(
+			#{store_seq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeNm}
+			<if test='classyn != null and classyn != "" and classyn == "Y"'>
+			, #{class1}
+			, #{class2}
+			, #{class3}
+			</if>
+			, #{sabun}
+			, #{sabun2}
+			, #{classyn}
+			, #{useYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<!-- 매장 update -->
+	<update id="storeUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeUpdate */
+		update ZM_SALES_STORE
+		   set store_nm = #{storeNm}
+		   <if test='classyn != null and classyn != "" and classyn == "Y"'>
+		   	 , class1 = #{class1}
+			 , class2 = #{class2}
+			 , class3 = #{class3}
+		   </if>
+		    <if test='classyn != null and classyn != "" and classyn == "N"'>
+		   	 , class1 = ''
+			 , class2 = ''
+			 , class3 = ''
+		   </if>	 
+			 , sabun = #{sabun}
+			 , sabun2 = #{sabun2}
+			 , class_yn = #{classyn}
+			 , use_yn   = #{useYn}
+			 , mod_dttm = NOW()
+			 , mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_seq = #{storeSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<!-- 매장상세 CNT-->
+	<select id="selectStoreDetailCnt" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectStoreDetailCnt */
+		select count(*) AS cnt
+		  from ZM_SALES_STORE_DETAIL a
+		  	   left outer join ZM_SALES_STORE b on a.store_seq = b.store_seq and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx
+		 where 1 = 1
+		   and a.zemos_idx = #{zemosIdx}
+		   and a.store_seq = #{storeSeq}
+		   and a.wrkplc_idx = #{wrkplcIdx}
+	</select>
+	
+	<!-- 매장상세 -->
+	<select id="selectStoreDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectStoreDetail */
+		select a.store_detail_seq as storeDetailSeq
+		 	 , a.store_seq as storeSeq
+		 	 , b.store_nm as storeNm
+			 , a.zemos_idx as zemosIdx
+			 , a.file_yn as fileYn
+			 , a.unit_yn as unitYn
+			 /*, a.push_dttm as pushDttm*/
+			 , DATE_FORMAT(a.push_dttm, '%H:%i') as pushDttm
+			 , a.push_yn as pushYn
+			 , a.reg_dttm as regDttm
+			 , a.reg_user as tegUser
+			 , a.mod_dttm as modDttm
+			 , a.mod_user as modUser
+		  from ZM_SALES_STORE_DETAIL a
+		  	   left outer join ZM_SALES_STORE b on a.store_seq = b.store_seq and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx
+		 where 1 = 1
+		   and a.zemos_idx = #{zemosIdx}
+		   and a.store_seq = #{storeSeq}
+		   and a.wrkplc_idx = #{wrkplcIdx}
+	</select>
+	
+	<select id="storeDetailItemCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeDetailItemCnt */
+		select count(*) as cnt
+		  from ZM_SALES_STORE_DETAIL_ITEM b
+		 where 1 = 1
+		   and b.zemos_idx = #{zemosIdx}
+		   and b.wrkplc_idx = #{wrkplcIdx}
+		   and b.store_seq = #{storeSeq}
+		   <if test='itemUseYn != null and itemUseYn.equals("Y")'>
+		   and b.use_yn = #{itemUseYn}
+		   </if>
+		   <if test='itemUseYn != null and itemUseYn.equals("N")'>
+		   and b.use_yn = ''
+		   </if>
+		    ORDER BY b.use_yn DESC,b.item_seq
+	</select>
+	
+	<select id="selectStoreDetailItem" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.selectStoreDetailItem */
+		select b.store_detail_item_seq as storeDetailItemSeq
+			 , b.store_detail_seq as storeDetailSeq
+			 , b.zemos_idx as zemosIdx
+			 , b.store_seq as storeSeq
+			 , b.item_seq as itemSeq
+			 , (SELECT item_nm FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) AS itemNm
+			 , (SELECT c.item_use_nm FROM ZM_SALES_ITEM_NM c WHERE c.zemos_idx = b.zemos_idx and c.wrkplc_idx = b.wrkplc_idx LIMIT 1) AS itemUseNm
+			 , b.item_code as itemCode 
+			 , Case when (SELECT off_yn FROM ZM_SALES_STORE d WHERE d.zemos_idx = b.zemos_idx and d.wrkplc_idx = b.wrkplc_idx and d.store_seq = b.store_seq) ='Y' then '0' else '1' end  AS onoffYn
+			 , (SELECT unit1_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit1Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq1 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm1
+			 , (SELECT unit2_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit2Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq2 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm2
+			 , (SELECT unit3_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit3Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq3 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm3
+			 , (SELECT unit4_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit4Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq4 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm4
+			 , (SELECT unit5_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit5Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq5 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm5
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq1 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit1Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq2 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit2Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq3 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit3Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq4 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit4Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq5 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit5Cost
+			 , (SELECT unit_seq1 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq1
+			 , (SELECT unit_seq2 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq2
+			 , (SELECT unit_seq3 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq3
+			 , (SELECT unit_seq4 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq4
+			 , (SELECT unit_seq5 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq5
+			 , b.use_yn as useYn
+			 , b.reg_dttm as regDttm
+			 , b.reg_user as regUser
+			 , b.mod_dttm as modDttm
+			 , b.mod_user as modUser
+		  from ZM_SALES_STORE_DETAIL_ITEM b
+		 where 1 = 1
+		   and b.zemos_idx = #{zemosIdx}
+		   and b.wrkplc_idx = #{wrkplcIdx}
+		   and b.store_seq = #{storeSeq}
+		   and b.use_yn = 'Y'
+		   <if test='itemUseYn != null and itemUseYn.equals("Y")'>
+		   and b.use_yn = #{itemUseYn}
+		   </if>
+		   <if test='itemUseYn != null and itemUseYn.equals("N")'>
+		   and b.use_yn = ''
+		   </if>
+		   <if test='onOffCnt == "2"'>
+		   union all
+		   select b.store_detail_item_seq as storeDetailItemSeq
+			 , b.store_detail_seq as storeDetailSeq
+			 , b.zemos_idx as zemosIdx
+			 , b.store_seq as storeSeq
+			 , b.item_seq as itemSeq
+			 , (SELECT item_nm FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) AS itemNm
+			 , (SELECT c.item_use_nm FROM ZM_SALES_ITEM_NM c WHERE c.zemos_idx = b.zemos_idx and c.wrkplc_idx = b.wrkplc_idx LIMIT 1) AS itemUseNm
+			 , b.item_code as itemCode 
+			 , Case when (SELECT on_yn FROM ZM_SALES_STORE d WHERE d.zemos_idx = b.zemos_idx and d.wrkplc_idx = b.wrkplc_idx and d.store_seq = b.store_seq)='Y' then '1' else '0' end AS onoffYn
+			 , (SELECT unit1_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit1Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq1 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm1
+			 , (SELECT unit2_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit2Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq2 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm2
+			 , (SELECT unit3_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit3Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq3 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm3
+			 , (SELECT unit4_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit4Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq4 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm4
+			 , (SELECT unit5_yn FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unit5Yn
+			 , (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq =(SELECT unit_seq5 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq)) as unitNm5
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq1 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit1Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq2 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit2Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq3 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit3Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq4 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit4Cost
+			 , (SELECT unit_cost FROM ZM_SALES_ITEM_DETAIL a 
+			 WHERE unit_seq = (SELECT unit_seq5 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) 
+			 and a.item_seq = (SELECT item_seq FROM ZM_SALES_ITEM a WHERE a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq) 
+			 and a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx ) as unit5Cost
+			 , (SELECT unit_seq1 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq1
+			 , (SELECT unit_seq2 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq2
+			 , (SELECT unit_seq3 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq3
+			 , (SELECT unit_seq4 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq4
+			 , (SELECT unit_seq5 FROM ZM_SALES_STORE_DETAIL f WHERE f.zemos_idx = b.zemos_idx and f.wrkplc_idx = b.wrkplc_idx and f.store_seq = b.store_seq) as unitSeq5
+			 , b.use_yn as useYn
+			 , b.reg_dttm as regDttm
+			 , b.reg_user as regUser
+			 , b.mod_dttm as modDttm
+			 , b.mod_user as modUser
+		  from ZM_SALES_STORE_DETAIL_ITEM b
+		 where 1 = 1
+		   and b.zemos_idx = #{zemosIdx}
+		   and b.wrkplc_idx = #{wrkplcIdx}
+		   and b.store_seq = #{storeSeq}
+		   and b.use_yn = 'Y'
+		   <if test='itemUseYn != null and itemUseYn.equals("Y")'>
+		   and b.use_yn = #{itemUseYn}
+		   </if>
+		   <if test='itemUseYn != null and itemUseYn.equals("N")'>
+		   and b.use_yn = ''
+		   </if>
+		   </if>
+	</select>
+	
+	<insert id="storeDetailInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="store_detail_seq">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeDetailInsert */
+		insert into ZM_SALES_STORE_DETAIL
+		(
+			store_detail_seq
+			, store_seq
+			, zemos_idx
+			, wrkplc_idx
+			, file_yn
+			, unit_yn
+			, push_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		values
+		(
+			#{store_detail_seq}
+			, #{storeSeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{fileYn}
+			, #{unitYn}
+			, #{pushYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+		<selectKey resultType="int" keyProperty="store_detail_seq" order="AFTER">
+        	SELECT LAST_INSERT_ID()
+    	</selectKey>
+	</insert>
+	
+	<insert id="storeDetailItemInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="store_detail_item_seq">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeDetailItemInsert */
+		insert into ZM_SALES_STORE_DETAIL_ITEM
+		(
+			store_detail_item_seq
+			, store_detail_seq
+			, zemos_idx
+			, wrkplc_idx
+			, store_seq
+			, item_seq
+			, use_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		values
+		(
+			#{store_detail_item_seq}
+			, #{storeDetailSeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeSeq}
+			, #{itemSeq}
+			, #{useYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<update id="storeDetailUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeDetailUpdate */
+		update ZM_SALES_STORE_DETAIL
+		   set file_yn   = #{fileYn}
+			 , unit_yn   = #{unitYn}
+			 , push_dttm = STR_TO_DATE(CONCAT(CURDATE(), #{pushDttm}), '%Y-%m-%d %H:%i:%s')
+			 , push_yn   = #{pushYn}
+			 , mod_dttm  = NOW()
+			 , mod_user  = #{regUserSeq}
+		 where 1 = 1
+		   and store_detail_seq = #{storeDetailSeq}
+		   and store_seq = #{storeSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<update id="storeDetailItemUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeDetailItemUpdate */
+		update ZM_SALES_STORE_DETAIL_ITEM
+		   set use_yn   = #{useYn}
+			 , mod_dttm = NOW()
+			 , mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_detail_item_seq = #{storeDetailItemSeq}
+		   and store_detail_seq = #{storeDetailSeq}
+		   and store_seq = #{storeSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and item_seq = #{itemSeq}
+	</update>
+	
+</mapper>

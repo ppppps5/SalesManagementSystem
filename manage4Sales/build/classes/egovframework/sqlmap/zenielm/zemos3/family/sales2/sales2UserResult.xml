@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2UserResult">
+<!-- 실적등록 update -->
+	<update id="resultUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.resultUpdate */
+		update ZM_SALES_RESULT_DETAIL
+		   set amt = replace(#{amt}, ',', '')
+		     , mod_dttm = now()
+		     , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and zemos_idx  = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq  = #{storeSeq}
+		   and result_seq   = #{resultSeq}
+		   and year       = #{year}
+		   and mm         = #{mm}
+
+	</update>
+	
+	<!-- 실적 MNG count -->
+	<select id="selectResultMngCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResultMngCnt */
+			select count(*) as cnt
+			FROM ZM_SALES_RESULT_L_MNG 
+			WHERE 1=1
+			<if test='zemosIdx != null and zemosIdx != ""'>
+			and zemos_idx = #{zemosIdx} 
+			</if> 
+			<if test='wrkplcIdx != null and wrkplcIdx != ""'>
+			and wrkplc_idx = #{wrkplcIdx}
+			</if> 
+			<if test='storeSeq != null and storeSeq != ""'>
+			and store_seq = #{storeSeq}
+			</if> 
+			<if test='resultDt != null and resultDt != ""'>
+			and result_dt =#{resultDt}
+			</if> 
+	</select>
+	<!-- 실적 Detail count -->
+	<select id="selectResultDetailCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Result.selectResultDetailCnt */
+			select count(*) as cnt
+			FROM ZM_SALES_RESULT_L_DETAIL 
+			WHERE 1=1
+			<if test='resultSeq != null and resultSeq != ""'>
+			and result_seq =#{resultSeq}
+			</if> 
+			<if test='zemosIdx != null and zemosIdx != ""'>
+			and zemos_idx = #{zemosIdx} 
+			</if> 
+			<if test='wrkplcIdx != null and wrkplcIdx != ""'>
+			and wrkplc_idx = #{wrkplcIdx}
+			</if> 
+			<if test='storeSeq != null and storeSeq != ""'>
+			and store_seq = #{storeSeq}
+			</if> 
+			<if test='itemSeq != null and itemSeq != ""'>
+			and item_seq = #{itemSeq}
+			</if> 
+	</select>
+	
+	<!-- 실적 MNG insert -->
+	<insert id="insertResultMng" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="result_seq">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.insertResultMng */
+ 	INSERT INTO ZM_SALES_RESULT_MNG
+	(
+	zemos_idx
+	, wrkplc_idx
+	, store_seq
+	, result_dt
+	, reg_dttm
+	, reg_user
+	, mod_dttm
+	, mod_user
+	)
+	VALUES(
+	#{zemosIdx}
+	, #{wrkplcIdx}
+	, #{storeSeq}
+	, #{resultDt}
+	, NOW()
+	, #{regUserSeq}
+	, NOW()
+	, #{regUserSeq}
+	)
+ 	</insert>
+	<insert id="insertResultLMng" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="result_seq">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.insertResultLMng */
+ 	INSERT INTO ZM_SALES_RESULT_L_MNG
+	(
+	result_seq
+	, zemos_idx
+	, wrkplc_idx
+	, store_seq
+	, result_dt
+	, reg_dttm
+	, reg_user
+	, mod_dttm
+	, mod_user
+	)
+	VALUES(
+	#{resultSeq}
+	, #{zemosIdx}
+	, #{wrkplcIdx}
+	, #{storeSeq}
+	, #{resultDt}
+	, NOW()
+	, #{regUserSeq}
+	, NOW()
+	, #{regUserSeq}
+	)
+ 	</insert>
+ 	<!-- 실적 Detail insert -->
+	<insert id="insertResultDetail" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="result_detail_seq">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.insertResultDetail */
+ 	INSERT INTO ZM_SALES_RESULT_DETAIL
+	(
+	result_seq
+	, zemos_idx
+	, wrkplc_idx
+	, store_seq
+	, item_seq
+	<if test = 'unitSeq1 != null and unitSeq1 != ""'>
+	, unit_seq1
+	, amt
+	, qty
+	, amt_on
+	, qty_on
+	</if>
+	<if test = 'unitSeq2 != null and unitSeq2 != ""'>
+	, unit_seq2
+	, amt2
+	, qty2
+	, amt2_on
+	, qty2_on
+	</if>
+	<if test = 'unitSeq3 != null and unitSeq3 != ""'>
+	, unit_seq3
+	, amt3
+	, qty3
+	, amt3_on
+	, qty3_on
+	</if>
+	<if test = 'unitSeq4 != null and unitSeq4 != ""'>
+	, unit_seq4
+	, amt4
+	, qty4
+	, amt4_on
+	, qty4_on
+	</if>
+	<if test = 'unitSeq5 != null and unitSeq5 != ""'>
+	, unit_seq5
+	, amt5
+	, qty5
+	, amt5_on
+	, qty5_on
+	</if>
+	, reg_dttm
+	, reg_user
+	, mod_dttm
+	, mod_user
+	)
+	VALUES(
+	#{resultSeq}
+	, #{zemosIdx}
+	, #{wrkplcIdx}
+	, #{storeSeq}
+	, #{itemSeq}
+	<if test = 'unitSeq1 != null and unitSeq1 != ""'>
+	, #{unitSeq1}
+	, #{amt}
+	, #{qty}
+	, #{amtOn}
+	, #{qtyOn}
+	</if>
+	<if test = 'unitSeq2 != null and unitSeq2 != ""'>
+	, #{unitSeq2}
+	, #{amt2}
+	, #{qty2}
+	, #{amt2On}
+	, #{qty2On}
+	</if>
+	<if test = 'unitSeq3 != null and unitSeq3 != ""'>
+	, #{unitSeq3}
+	, #{amt3}
+	, #{qty3}
+	, #{amt3On}
+	, #{qty3On}
+	</if>
+	<if test = 'unitSeq4 != null and unitSeq4 != ""'>
+	, #{unitSeq4}
+	, #{amt4}
+	, #{qty4}
+	, #{amt4On}
+	, #{qty4On}
+	</if>
+	<if test = 'unitSeq5 != null and unitSeq5 != ""'>
+	, #{unitSeq5}
+	, #{amt5}
+	, #{qty5}
+	, #{amt5On}
+	, #{qty5On}
+	</if>
+	, NOW()
+	, #{regUserSeq}
+	, NOW()
+	, #{regUserSeq}
+	)
+ 	</insert>
+ 	<!-- 실적 Detail insert -->
+	<insert id="insertResultLDetail" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="result_detail_seq">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.insertResultLDetail */
+ 	INSERT INTO ZM_SALES_RESULT_L_DETAIL
+	(
+	result_detail_seq
+	, result_seq
+	, zemos_idx
+	, wrkplc_idx
+	, store_seq
+	, item_seq
+	<if test = 'unitSeq1 != null and unitSeq1 != ""'>
+	, unit_seq1
+	, amt
+	, qty
+	, amt_on
+	, qty_on
+	</if>
+	<if test = 'unitSeq2 != null and unitSeq2 != ""'>
+	, unit_seq2
+	, amt2
+	, qty2
+	, amt2_on
+	, qty2_on
+	</if>
+	<if test = 'unitSeq3 != null and unitSeq3 != ""'>
+	, unit_seq3
+	, amt3
+	, qty3
+	, amt3_on
+	, qty3_on
+	</if>
+	<if test = 'unitSeq4 != null and unitSeq4 != ""'>
+	, unit_seq4
+	, amt4
+	, qty4
+	, amt4_on
+	, qty4_on
+	</if>
+	<if test = 'unitSeq5 != null and unitSeq5 != ""'>
+	, unit_seq5
+	, amt5
+	, qty5
+	, amt5_on
+	, qty5_on
+	</if>
+	, reg_dttm
+	, reg_user
+	, mod_dttm
+	, mod_user
+	)
+	VALUES(
+	#{resultDetailSeq}
+	, #{resultSeq}
+	, #{zemosIdx}
+	, #{wrkplcIdx}
+	, #{storeSeq}
+	, #{itemSeq}
+	<if test = 'unitSeq1 != null and unitSeq1 != ""'>
+	, #{unitSeq1}
+	, #{amt}
+	, #{qty}
+	, #{amtOn}
+	, #{qtyOn}
+	</if>
+	<if test = 'unitSeq2 != null and unitSeq2 != ""'>
+	, #{unitSeq2}
+	, #{amt2}
+	, #{qty2}
+	, #{amt2On}
+	, #{qty2On}
+	</if>
+	<if test = 'unitSeq3 != null and unitSeq3 != ""'>
+	, #{unitSeq3}
+	, #{amt3}
+	, #{qty3}
+	, #{amt3On}
+	, #{qty3On}
+	</if>
+	<if test = 'unitSeq4 != null and unitSeq4 != ""'>
+	, #{unitSeq4}
+	, #{amt4}
+	, #{qty4}
+	, #{amt4On}
+	, #{qty4On}
+	</if>
+	<if test = 'unitSeq5 != null and unitSeq5 != ""'>
+	, #{unitSeq5}
+	, #{amt5}
+	, #{qty5}
+	, #{amt5On}
+	, #{qty5On}
+	</if>
+	, NOW()
+	, #{regUserSeq}
+	, NOW()
+	, #{regUserSeq}
+	)
+ 	</insert>
+ 	<!-- 실적 MNG List -->
+ 	<select id="selectResultMng" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.selectResultMng */
+ 	SELECT 
+	 	result_seq as resultSeq
+	 	, zemos_idx as zemosIdx
+	 	, wrkplc_idx as wrkplcIdx
+	 	, store_seq as storeSeq
+	 	, result_dt as ResultDt
+	 	, request_yn as requestYn
+	 	, file_owner as fileOwner
+	 	, dollar_amt as dollerAmt
+	 	, reg_dttm as regDttm
+	 	, reg_user as regUser
+	 	, mod_dttm as modDttm
+	 	, mod_user as modUser
+	FROM ZM_SALES_RESULT_L_MNG
+	WHERE 1=1
+		<if test='zemosIdx != null and zemosIdx != ""'>
+		and zemos_idx = #{zemosIdx} 
+		</if> 
+		<if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		and wrkplc_idx = #{wrkplcIdx}
+		</if> 
+		<if test='storeSeq != null and storeSeq != ""'>
+		and store_seq = #{storeSeq}
+		</if> 
+		<if test='resultDt != null and resultDt != ""'>
+		and result_dt =#{resultDt}
+		</if> 
+ 	</select>
+ 	<!-- 실적 MNG List -->
+ 	<select id="selectResultDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.selectResultDetail */
+ 	select 
+ 		result_detail_seq as resultDetailSeq
+ 		, result_seq as resultSeq
+ 		, zemos_idx as zemosIdx
+ 		, wrkplc_idx as wrkplcIdx
+ 		, store_seq as StoreSeq
+ 		, item_seq as itemSeq
+ 		, unit_seq1 as unitSeq1
+ 		, amt as amt
+ 		, qty as qty
+ 		, amt_on as amtOn
+ 		, qty_on as qtyOn
+ 		, unit_seq2 as unitSeq2
+ 		, amt2 as amt2
+ 		, qty2 as qty2
+ 		, amt2_on as amt2On
+ 		, qty2_on as qty2On
+ 		, unit_seq3 as unitSeq3
+ 		, amt3 as amt3
+ 		, qty3 as qty3
+ 		, amt3_on as amt3On
+ 		, qty3_on as qty3On
+ 		, unit_seq4 as unitSeq4
+ 		, amt4 as amt4
+ 		, qty4 as qty4
+ 		, amt4_on as amt4On
+ 		, qty4_on as qty4On
+ 		, unit_seq5 as unitSeq5
+ 		, amt5 as amt5
+ 		, qty5 as qty5
+ 		, amt5_on as amt5On
+ 		, qty5_on as qty5On
+ 		, reg_dttm as regDttm
+ 		, reg_user as regUser
+ 		, mod_dttm as modDttm
+ 		, mod_user as modUser
+			FROM ZM_SALES_RESULT_L_DETAIL 
+			WHERE 1=1
+			<if test='resultSeq != null and resultSeq != ""'>
+			and result_seq =#{resultSeq}
+			</if> 
+			<if test='zemosIdx != null and zemosIdx != ""'>
+			and zemos_idx = #{zemosIdx} 
+			</if> 
+			<if test='wrkplcIdx != null and wrkplcIdx != ""'>
+			and wrkplc_idx = #{wrkplcIdx}
+			</if> 
+			<if test='storeSeq != null and storeSeq != ""'>
+			and store_seq = #{storeSeq}
+			</if> 
+			<if test='itemSeq != null and itemSeq != ""'>
+			and item_seq = #{itemSeq}
+			</if>
+ 	</select> 	
+ 	<!-- 월마감 Yn -->
+ 	<select id="selectCloseYn" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+ 	/* zenielm.zemos3.family.sales2.sales2Result.selectCloseYn */
+ 	SELECT 
+	close_yn as closeYn
+	FROM ZM_SALES_CLOSE 
+	WHERE 1=1 
+	AND zemos_idx = #{zemosIdx} 
+	AND wrkplc_idx = #{wrkplcIdx}
+	AND yyyy = #{yyyy}
+	AND mm = #{mm}
+ 	</select> 	
+ 	<!-- 실적Detail update -->
+	<update id="updateResultDetail" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.updateResultDetail */
+		UPDATE ZM_SALES_RESULT_DETAIL
+		SET 
+			<if test = 'unitSeq1 != null and unitSeq1 != ""'>
+			unit_seq1=#{unitSeq1}
+				<if test = 'amt != null and amt != ""'>
+				, amt=#{amt}
+				, qty=#{qty}
+				</if>
+				<if test = 'amtOn != null and amtOn != ""'>
+				, amt_on=#{amtOn}
+				, qty_on=#{qtyOn}
+				</if>
+			</if>
+			<if test = 'unitSeq2 != null and unitSeq2 != ""'>
+			, unit_seq2=#{unitSeq2}
+				<if test = 'amt2 != null and amt2 != ""'>
+				, amt2=#{amt2}
+				, qty2=#{qty2}
+				</if>
+				<if test = 'amt2On != null and amt2On != ""'>
+				, amt2_on=#{amt2On}
+				, qty2_on=#{qty2On}
+				</if>
+			</if>
+			<if test = 'unitSeq3 != null and unitSeq3 != ""'>
+			, unit_seq3=#{unitSeq3}
+				<if test = 'amt3 != null and amt3 != ""'>
+				, amt3=#{amt3}
+				, qty3=#{qty3}
+				</if>
+				<if test = 'amt3On != null and amt3On != ""'>
+				, amt3_on=#{amt3On}
+				, qty3_on=#{qty3On}
+				</if>
+			</if>
+			<if test = 'unitSeq4 != null and unitSeq4 != ""'>
+			, unit_seq4=#{unitSeq4}
+				<if test = 'amt4 != null and amt4 != ""'>
+				, amt4=#{amt4}
+				, qty4=#{qty4}
+				</if>
+				<if test = 'amt4On != null and amt4On != ""'>
+				, amt4_on=#{amt4On}
+				, qty4_on=#{qty4On}
+				</if>
+			</if>
+			<if test = 'unitSeq5 != null and unitSeq5 != ""'>
+			, unit_seq5=#{unitSeq5}
+				<if test = 'amt5 != null and amt5 != ""'>
+				, amt5=#{amt5}
+				, qty5=#{qty5}
+				</if>
+				<if test = 'amt5On != null and amt5On != ""'>
+				, amt5_on=#{amt5On}
+				, qty5_on=#{qty5On}
+				</if>
+			</if>
+			, mod_dttm=NOW()
+			, mod_user=#{regUserSeq}
+		WHERE result_detail_seq=#{resultDetailSeq}
+	</update>
+	<update id="updateResultLDetail" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Result.updateResultLDetail */
+		UPDATE ZM_SALES_RESULT_L_DETAIL
+		SET 
+			<if test = 'unitSeq1 != null and unitSeq1 != ""'>
+			unit_seq1=#{unitSeq1}
+				<if test = 'amt != null and amt != ""'>
+				, amt=#{amt}
+				, qty=#{qty}
+				</if>
+				<if test = 'amtOn != null and amtOn != ""'>
+				, amt_on=#{amtOn}
+				, qty_on=#{qtyOn}
+				</if>
+			</if>
+			<if test = 'unitSeq2 != null and unitSeq2 != ""'>
+			, unit_seq2=#{unitSeq2}
+				<if test = 'amt2 != null and amt2 != ""'>
+				, amt2=#{amt2}
+				, qty2=#{qty2}
+				</if>
+				<if test = 'amt2On != null and amt2On != ""'>
+				, amt2_on=#{amt2On}
+				, qty2_on=#{qty2On}
+				</if>
+			</if>
+			<if test = 'unitSeq3 != null and unitSeq3 != ""'>
+			, unit_seq3=#{unitSeq3}
+				<if test = 'amt3 != null and amt3 != ""'>
+				, amt3=#{amt3}
+				, qty3=#{qty3}
+				</if>
+				<if test = 'amt3On != null and amt3On != ""'>
+				, amt3_on=#{amt3On}
+				, qty3_on=#{qty3On}
+				</if>
+			</if>
+			<if test = 'unitSeq4 != null and unitSeq4 != ""'>
+			, unit_seq4=#{unitSeq4}
+				<if test = 'amt4 != null and amt4 != ""'>
+				, amt4=#{amt4}
+				, qty4=#{qty4}
+				</if>
+				<if test = 'amt4On != null and amt4On != ""'>
+				, amt4_on=#{amt4On}
+				, qty4_on=#{qty4On}
+				</if>
+			</if>
+			<if test = 'unitSeq5 != null and unitSeq5 != ""'>
+			, unit_seq5=#{unitSeq5}
+				<if test = 'amt5 != null and amt5 != ""'>
+				, amt5=#{amt5}
+				, qty5=#{qty5}
+				</if>
+				<if test = 'amt5On != null and amt5On != ""'>
+				, amt5_on=#{amt5On}
+				, qty5_on=#{qty5On}
+				</if>
+			</if> 
+			, mod_dttm=NOW()
+			, mod_user=#{regUserSeq}
+		WHERE result_detail_seq=#{resultDetailSeq}
+	</update>
+	</mapper>

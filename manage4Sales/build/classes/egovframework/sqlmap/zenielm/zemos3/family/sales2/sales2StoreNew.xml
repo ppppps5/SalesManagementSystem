@@ -1,0 +1,549 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2StoreNew">
+
+	<!-- 제모스 판매관리 매장 XML -->
+
+	<!-- 매장 count -->
+	<select id="selectStoreNewCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewCnt */
+		select count(*) as cnt
+		  from ZM_SALES_STORE
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeNm != null and storeNm != ""'>
+		   and store_nm = #{storeNm}
+		   </if>
+		   <!-- <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if> -->
+	</select>
+	
+	<select id="selectStoreNew" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNew */
+		select count(*) as cnt
+		  from ZM_SALES_STORE
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeNm != null and storeNm != ""'>
+		   and store_nm = #{storeNm}
+		   </if>
+		   <!-- <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if> -->
+	</select>
+
+	<select id="selectStoreNewList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewList */
+		select store_seq as storeSeq
+			 , zemos_idx as zemosIdx
+			 , wrkplc_idx as wrkplcIdx
+			 , store_nm as storeNm
+			 , class1 as class1
+			 , class2 as class2
+			 , class3 as class3
+			 , class4 as class4
+			 , class5 as class5
+			 , off_yn as offYn
+			 , on_yn as onYn
+			 , tax_yn as taxYn
+			 , class_yn as classyn
+			 , use_yn as useYn
+			 , reg_dttm as regDttm 
+			 , reg_user as tegUser
+			 , mod_dttm as modDttm
+			 , mod_user as modUser
+		  from ZM_SALES_STORE
+		 where 1 = 1
+		   <!-- <if test='detail == "detail" and storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if> -->
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeNm != null and storeNm != ""'>
+		   and store_nm like CONCAT(CONCAT('%', #{storeNm}), '%')
+		   </if>
+		   <if test='selectUseYn != null and selectUseYn != ""'>
+		   and use_yn = #{selectUseYn}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+		 order BY use_yn desc,class_yn desc,store_nm
+	</select>
+	
+	<select id="selectStoreNewUseNameList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewUseNameList */
+		select zemos_idx as zemosIdx
+		     , store_use_nm as storeUseNm
+		  from ZM_SALES_STORE_NM
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		LIMIT 1
+	</select>
+	
+	<!-- 매장 insert -->
+	<insert id="storeInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="store_seq">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.storeInsert */
+		insert into ZM_SALES_STORE
+		(
+			zemos_idx
+			, wrkplc_idx
+			, store_nm
+			, off_yn
+			, on_yn
+			, tax_yn
+			<if test='classYn == "Y"'>
+			, class1
+			, class2
+			, class3
+			, class4
+			, class5
+			</if>
+			, class_yn
+			, use_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		values
+		(
+			#{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeNm}
+			, #{offYn}
+			, #{onYn}
+			, #{taxYn}
+			<if test='classYn == "Y"'>
+			, #{class1}
+			, #{class2}
+			, #{class3}
+			, #{class4}
+			, #{class5}
+			</if>
+			, #{classYn}
+			, #{useYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<select id="selectStoreNewDetailList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewList */
+		select 
+			store_detail_seq as storeDetailSeq
+			, store_seq as storeSeq
+			, zemos_idx as zemosIdx
+			, wrkplc_idx as wrkplcIdx
+			, file_yn as fileYn
+			, unit_seq1 as unitSeq1
+			, unit_seq2 as unitSeq2
+			, unit_seq3 as unitSeq3
+			, unit_seq4 as unitSeq4
+			, unit_seq5 as unitSeq5
+			, unit1_yn as unit1Yn
+			, unit2_yn as unit2Yn
+			, unit3_yn as unit3Yn
+			, unit4_yn as unit4Yn
+			, unit5_yn as unit5Yn
+			, push_dttm as pushDttm
+			, push_yn as pushYn
+			, reg_dttm as regDttm
+			, reg_user as regUser
+			, mod_dttm as modDttm
+			, mod_user as modUser
+		  from ZM_SALES_STORE_DETAIL
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+	</select>
+	
+	
+	<select id="selectStoreNewDetailItemList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewList */
+		select 
+			store_detail_item_seq as storeDetailItemSeq 
+			, store_detail_seq as storeDetailSeq
+			, zemos_idx as zemosIdx
+			, wrkplc_idx as wrkplcIdx
+			, store_seq as storeSeq
+			, item_seq as itemSeq
+			, item_code as itemCode
+			, use_yn as useYn
+			, reg_dttm as regDttm
+			, reg_user as regUser
+			, mod_dttm as modDttm
+			, mod_user as modUser
+		  from ZM_SALES_STORE_DETAIL_ITEM
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+	</select>
+	
+	
+	<select id="selectStoreNewSmList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewList */
+		select 
+			store_sm_seq as storeSmSeq
+			, store_seq as storeSeq
+			, zemos_idx as zemosIdx
+			, wrkplc_idx as wrkplcIdx
+			, sabun as sabun
+			, upload_yn as uploadYn
+			, approval_yn as approvalYn
+			, delete_yn as deleteYn
+			, reg_dttm as regDttm
+			, reg_user as regUser
+			, mod_dttm as modDttm
+			, mod_user as modUser
+		  from ZM_SALE_STORE_SM
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+	</select>
+	
+	
+	
+	<!-- 매장디테일 insert -->
+	<insert id="storeNewDetailInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="store_detail_seq">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.storeDetailInsert */
+		insert into ZM_SALES_STORE_DETAIL
+		(
+			store_detail_seq
+			, store_seq
+			, zemos_idx
+			, wrkplc_idx
+			<if test='unitSeq1 != null and unitSeq1 != ""'>
+			, unit_seq1
+			, unit1_yn
+			</if>
+			<if test='unitSeq2 != null and unitSeq2 != ""'>
+			, unit_seq2
+			, unit2_yn
+			</if>
+			<if test='unitSeq3 != null and unitSeq3 != ""'>
+			, unit_seq3
+			, unit3_yn
+			</if>
+			<if test='unitSeq4 != null and unitSeq4 != ""'>
+			, unit_seq4
+			, unit4_yn
+			</if>
+			<if test='unitSeq5 != null and unitSeq5 != ""'>
+			, unit_seq5
+			, unit5_yn
+			</if>
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		values
+		(
+			#{store_detail_seq}
+			, #{storeSeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			<if test='unitSeq1 != null and unitSeq1 != ""'>
+			, #{unitSeq1}
+			, #{unit1Yn}
+			</if>
+			<if test='unitSeq2 != null and unitSeq2 != ""'>
+			, #{unitSeq2}
+			, #{unit2Yn}
+			</if>
+			<if test='unitSeq3 != null and unitSeq3 != ""'>
+			, #{unitSeq3}
+			, #{unit3Yn}
+			</if>
+			<if test='unitSeq4 != null and unitSeq4 != ""'>
+			, #{unitSeq4}
+			, #{unit4Yn}
+			</if>
+			<if test='unitSeq5 != null and unitSeq5 != ""'>
+			, #{unitSeq5}
+			, #{unit5Yn}
+			</if>
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	
+	<!-- 스토어 디테일 아이템 insert -->
+	<insert id="storeItemInsert" parameterType="java.util.HashMap">
+		INSERT INTO ZM_SALES_STORE_DETAIL_ITEM
+		(
+			store_detail_seq
+			, zemos_idx
+			, wrkplc_idx
+			, store_seq
+			, item_seq
+			, item_code
+			, use_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user)
+		VALUES
+		(
+			#{storeDetailSeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeSeq}
+			, #{itemSeq}
+			, #{itemCode}
+			, #{itemUseYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<insert id="storeSmInsert" parameterType="java.util.HashMap">
+		INSERT INTO ZM_SALE_STORE_SM
+		(
+			store_seq
+			, zemos_idx
+			, wrkplc_idx
+			, sabun
+			, upload_yn
+			, approval_yn
+			, delete_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+		VALUES
+		(
+			#{storeSeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{sabun}
+			, #{uploadYn}
+			, #{approvalYn}
+			, 'N'
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+			)
+	</insert>
+	
+	<select id="selectItemListNoDetail" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Item.selectItemListNoDetail */
+		SELECT A.item_seq as itemSeq
+		     , A.zemos_idx as zemosIdx
+		     , A.wrkplc_idx as wrkplcIdx
+		     , A.item_nm as itemNm 
+		     , A.item_code as itemCode
+		     , A.use_yn as useYn
+		     , A.reg_dttm as regDttm
+		     , A.reg_user as regUser
+		     , A.mod_dttm as modDttm
+		     , A.mod_user as modUser
+		 from ZM_SALES_ITEM	A
+		 where 1 = 1	
+		   <if test='itemSeq != null and itemSeq != ""'>
+		   and A.item_seq = #{itemSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and A.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and A.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='itemNm != null and itemNm != ""'>
+		   and A.item_nm like CONCAT(CONCAT('%', #{itemNm}), '%')
+		   </if>
+		   <if test='selectUseYn != null and selectUseYn != ""'>
+		   and A.use_yn = #{selectUseYn}
+		   </if>
+		 order by A.use_yn DESC, A.item_seq
+	</select> 
+	
+	<!-- 매장 update -->
+	<update id="storeUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeUpdate */
+		update ZM_SALES_STORE
+		   set zemos_idx = #{zemosIdx}
+			, wrkplc_idx = #{wrkplcIdx}
+			, store_nm = #{storeNm}
+			, off_yn = #{offYn}
+			, on_yn = #{onYn}
+			, tax_yn = #{taxYn}
+			<if test='classYn == "Y"'>
+			, class1 = #{class1}
+			, class2 = #{class2}
+			, class3 = #{class3}
+			, class4 = #{class4}
+			, class5 = #{class5}
+			</if>
+			, class_yn = #{classYn}
+			, use_yn = #{useYn}
+			, mod_dttm = NOW()
+			, mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_seq = #{storeSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<!-- 매장디테일 update -->
+	<update id="storeDetailUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeUpdate */
+		update ZM_SALES_STORE_DETAIL
+		   set store_seq = #{storeSeq}
+			, zemos_idx = #{zemosIdx}
+			, wrkplc_idx = #{wrkplcIdx}
+			<if test='unitSeq1 != null and unitSeq1 != ""'>
+			, unit_seq1 = #{unitSeq1}
+			, unit1_yn = #{unit1Yn}
+			</if>
+			<if test='unitSeq2 != null and unitSeq2 != ""'>
+			, unit_seq2 = #{unitSeq2}
+			, unit2_yn = #{unit2Yn}
+			</if>
+			<if test='unitSeq3 != null and unitSeq3 != ""'>
+			, unit_seq3 = #{unitSeq3}
+			, unit3_yn = #{unit3Yn}
+			</if>
+			<if test='unitSeq4 != null and unitSeq4 != ""'>
+			, unit_seq4 = #{unitSeq4}
+			, unit4_yn = #{unit4Yn}
+			</if>
+			<if test='unitSeq5 != null and unitSeq5 != ""'>
+			, unit_seq5 = #{unitSeq5}
+			, unit5_yn = #{unit5Yn}
+			</if>
+			, mod_dttm = NOW()
+			, mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_detail_seq = #{storeDetailSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<!-- 매장디테일 아이템 update -->
+	<update id="storeDetailItemUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeUpdate */
+		update ZM_SALES_STORE_DETAIL_ITEM
+		   set store_detail_seq = #{storeDetailSeq}
+			, zemos_idx = #{zemosIdx}
+			, wrkplc_idx = #{wrkplcIdx}
+			, store_seq = #{storeSeq}
+			, item_seq = #{itemSeq}
+			, item_code = #{itemCode}
+			, use_yn = #{itemUseYn}
+			, mod_dttm = NOW()
+			, mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_seq = #{storeSeq}
+		   and item_seq = #{itemSeq}
+		   and store_detail_seq = #{storeDetailSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<!-- 매장관리자 update -->
+	<update id="storeSmUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeUpdate */
+		update ZM_SALE_STORE_SM
+		   set store_seq = #{storeSeq}
+			, zemos_idx = #{zemosIdx}
+			, wrkplc_idx = #{wrkplcIdx}
+			, sabun = #{sabun}
+			, upload_yn = #{uploadYn}
+			, approval_yn = #{approvalYn}
+			, delete_yn = #{deleteYn}
+			, mod_dttm = NOW()
+			, mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_seq = #{storeSeq}
+		   and sabun = #{sabun}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<!-- 매장관리자 deleteYn update -->
+	<update id="storeSmDeleteYnUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Store.storeUpdate */
+		update ZM_SALE_STORE_SM
+		   set 
+			delete_yn = #{deleteYn}
+			, mod_dttm = NOW()
+			, mod_user = #{regUserSeq}
+		 where 1 = 1
+		   and store_seq = #{storeSeq}
+		   and sabun = #{sabun}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<select id="selectStoreNewSmCount" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2StoreNew.selectStoreNewList */
+		select 
+			select count(*) as cnt
+		  from ZM_SALE_STORE_SM
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+		   <if test='sabun != null and sabun != ""'>
+		   and store_seq = #{storeSeq}
+		   </if>
+	</select>
+</mapper>

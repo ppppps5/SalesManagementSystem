@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2Close">
+
+	<!-- 제모스 판매관리 마감 XML -->
+	<!-- 마감 화면 년도 selectbox(현재년도의 이전 15년 ~ 이후 3년) -->
+	<select id="selectYyyy" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Close.selectYyyy */
+		SELECT DATE_FORMAT(DATE_ADD(CONCAT(YEAR(now()),'0101'), INTERVAL seq year), '%Y') AS yyyy
+		 FROM (
+		 	  SELECT @num := @num + 1 AS seq
+				FROM information_schema.tables a
+		 		   , information_schema.tables b 
+		 		   , (select @num := 0) c
+			   limit 3
+			  ) t
+		union
+		SELECT DATE_FORMAT(DATE_ADD(CONCAT(YEAR(now()),'0101'), INTERVAL seq year), '%Y') AS yyyy
+		 FROM (
+		 	  SELECT @num := @num - 1 AS seq
+				FROM information_schema.tables a
+		 		   , information_schema.tables b
+		 		   , (select @num := 1) c
+			   limit 15
+			  ) t
+		order by yyyy desc
+	</select>
+	
+	<!-- 마감 count -->
+	<select id="selectSales2CloseCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Close.selectSales2CloseCnt */
+		select count(*) AS cnt
+		  from ZM_SALES_CLOSE
+		 where 1 = 1
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='useYn != null and useYn != ""'>
+		   and close_yn = #{closeYn}
+		   </if>
+		   <if test='yyyy != null and yyyy != ""'>
+		   and yyyy = #{yyyy}
+		   </if>
+		   
+	</select>
+	
+	<!-- 마감 list -->
+	<select id="selectSales2Close" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Close.selectSales2Close */
+		select close_seq as closeSeq
+		     , zemos_idx  as zemosIdx
+		     , wrkplc_idx  as wrkplcIdx
+		     , yyyy as Yyyy
+		     , mm as Mm
+		     , CONCAT(yyyy,'-',mm) AS YyyyMm
+		     , close_yn     as closeYn
+		     , reg_dttm   as regDttm
+		     , reg_user   as regUser
+		     , mod_dttm   as modDttm
+		     , mod_user   as modUser
+		  from ZM_SALES_CLOSE
+		 where 1 = 1
+		   <if test='class1Seq != null and class1Seq != ""'>
+		   and close_seq = #{closeSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='yyyy != null and yyyy != ""'>
+		   and yyyy = #{yyyy}
+		   </if>
+		 order by mm
+	</select>
+	
+	<!-- 마감01 화면 조회 list -->
+	<select id="selectSales2Close01" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Close.selectSales2Close01 */
+		select class1_seq as class1Seq
+		     , zemos_idx  as zemosIdx
+		     , class1_nm  as class1Nm
+		     , use_yn     as useYn
+		     , reg_dttm   as regDttm
+		     , reg_user   as regUser
+		     , mod_dttm   as modDttm
+		     , mod_user   as modUser
+		  from ZM_SALES_CLOSE
+		 where 1 = 1
+		   <if test='class1Seq != null and class1Seq != ""'>
+		   and close_seq = #{closeSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   and yyyy = #{yyyy}
+	</select>
+	
+	<!-- 마감 insert -->
+	<insert id="closeInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="class1_seq">
+		/* zenielm.zemos3.family.sales2.sales2Close.closeInsert */
+		
+insert into ZM_SALES_CLOSE
+		(
+		     zemos_idx
+			, wrkplc_idx
+			, yyyy
+			, mm
+			, close_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		)
+	SELECT    #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{yyyy}
+			, b.mm
+			, '' AS closeYn
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		FROM 
+			(SELECT DATE_FORMAT(DATE_ADD(CONCAT(#{yyyy},'0101'), INTERVAL seq month), '%m') AS mm
+			 FROM (
+			 	  SELECT @num := @num - 1 AS seq
+					FROM information_schema.tables a
+			 		   , information_schema.tables b
+			 		   , 
+	 (select @num := 1) c
+				   LIMIT 12
+				  ) a	) b
+				  order BY b.mm
+	</insert>
+	
+	<!-- 마감 update -->
+	<update id="closeUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Close.closeUpdate */
+		update ZM_SALES_CLOSE
+		   set close_yn = #{closeYn}
+			 , mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and close_seq = #{closeSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and yyyy = #{Yyyy}
+	</update>
+	
+</mapper>

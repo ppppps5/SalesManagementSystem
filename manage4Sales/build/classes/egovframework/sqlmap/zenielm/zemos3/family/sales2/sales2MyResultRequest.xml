@@ -1,0 +1,3399 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2MyResultRequest">
+
+	<!-- 제모스 판매관리 나의등록 현황 및 수정요청 XML -->
+
+	<!-- Sample -->
+	<!--
+	<select id="selectSales2MyResultRequest" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectSales2MyResultRequest */
+		SELECT 1
+	</select>
+	-->
+	
+	<!-- 년도(현재년도 ~ 20년전) -->
+	<select id="selectYyyy" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectYyyy */
+		SELECT DATE_FORMAT(DATE_ADD(CONCAT(YEAR(now()),'0101'), INTERVAL seq year), '%Y') AS yyyy
+		 FROM (
+		 	  SELECT @num := @num - 1 AS seq
+				FROM information_schema.tables a
+		 		   , information_schema.tables b
+		 		   , (select @num := 1) c
+			   limit 20
+			  ) t
+	</select>
+	
+	<!-- 나의등록현황 count -->
+	<select id="selectMyResultCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultCnt */
+		select count(*) as cnt
+		  from (
+				select *
+				  from (
+				        select (select store_nm
+						          from ZM_SALES_STORE
+						         where a.zemos_idx = zemos_idx
+						           and a.wrkplc_idx = wrkplc_idx
+						           and a.store_seq = store_seq) as storeNm
+							  , date_format(a.result_dt, '%Y.%m.%d') as resultDt
+							  , a.store_seq as storeSeq
+							  , a.zemos_idx as zemosIdx
+							  , a.result_seq as resultSeq
+						   from ZM_SALES_RESULT_MNG a
+						        inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.result_seq = b.result_seq and a.store_seq = b.store_seq
+						        left outer join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+						        and c.result_change_seq = (select max(result_change_seq) 
+								                             from ZM_SALES_HISTORY_MNG 
+								                            where  zemos_idx = a.zemos_idx
+								                              and wrkplc_idx = a.wrkplc_idx
+								                              and store_seq = a.store_seq
+		                                            		  and result_seq = a.result_seq
+								                              /* and request_yn = 'Y' */
+								                          )
+							    left outer join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and b.item_seq = d.item_seq
+				          where 1 = 1
+				            and left(date_format(a.result_dt, '%Y%m%d'), 6) = #{yyyyMm}
+						    <if test='zemosIdx != null and zemosIdx != ""'>
+						    and a.zemos_idx = #{zemosIdx}
+						    </if>
+						    <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+						    and a.wrkplc_idx = #{wrkplcIdx}
+						    </if>
+						    and a.store_seq in (select store_seq 
+						  						  from ZM_SALES_STORE 
+					   						     where 1=1 
+					   							   and zemos_idx = #{zemosIdx} 
+						   						   and wrkplc_idx = #{wrkplcIdx} 
+						   						   <if test='salesabun != null and salesabun != ""'>
+						   						   and (sabun = #{salesabun} or sabun2 = #{salesabun})
+						   						   </if>
+						   						   and use_yn = 'Y' 
+					   						   )
+				       ) a
+				 group by a.storeNm, a.resultDt, a.storeSeq, a.zemosIdx, a.resultSeq
+		       ) a
+	</select>
+	
+	<!-- 실적등록현황 count -->
+	<select id="selectMyResultCntNew" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultCntNew */
+		SELECT 
+		COUNT(*)
+		FROM
+		(
+			SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty), '0') as qty
+			, IFNULL(sum(b.amt), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty_on), '99')  = '0'then '1'  end  as onOffYn 
+			, IFNULL(sum(b.qty_on), '0') as qty
+			, IFNULL(sum(b.amt_on), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty2), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty2), '0') as qty
+			, IFNULL(sum(b.amt2), '0') as amt
+			, b.unit_seq2  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty2_on), '99')  = '0'then '1'  end  as onOffYn 
+			, IFNULL(sum(b.qty2_on), '0') as qty
+			, IFNULL(sum(b.amt2_on), '0') as amt
+			, b.unit_seq2 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty3), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty3), '0') as qty
+			, IFNULL(sum(b.amt3), '0') as amt
+			, b.unit_seq3  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty3_on), '99')  = '0'then '1'  end  as onOffYn 
+			, IFNULL(sum(b.qty3_on), '0') as qty
+			, IFNULL(sum(b.amt3_on), '0') as amt
+			, b.unit_seq3 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty4), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty4), '0') as qty
+			, IFNULL(sum(b.amt4), '0') as amt
+			, b.unit_seq4  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty4_on), '99')  = '0'then '1'  end  as onOffYn 
+			, IFNULL(sum(b.qty4_on), '0') as qty
+			, IFNULL(sum(b.amt4_on), '0') as amt
+			, b.unit_seq4 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty5), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty5), '0') as qty
+			, IFNULL(sum(b.amt5), '0') as amt
+			, b.unit_seq5  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5_on), '0')    <![CDATA[ <> ]]>  '0' then '1'
+                when IFNULL(sum(b.qty5_on), '99')  = '0'then '1'  end  as onOffYn 
+			, IFNULL(sum(b.qty5_on), '0') as qty
+			, IFNULL(sum(b.amt5_on), '0') as amt
+			, b.unit_seq5 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+		) f
+		where 1=1
+		and f.unitSeq is not null
+		<if test="searchYyyyMm != '' and searchYyyyMm != null">
+		and SUBSTR(f.resultDt, 1, 7) = #{searchYyyyMm}
+		</if>
+		<if test="storeSeq != '' and storeSeq != null">
+			and f.storeSeq = #{storeSeq}
+		</if>
+		and f.onOffYn IS NOT NULL
+	</select>
+	
+	<!-- 나의등록현황 list -->
+	<select id="selectMyResult" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResult */
+		select a.storeNm
+		     , a.resultDt
+		     , case when a.dollarAmt is null or a.dollarAmt = '' then 0 else a.dollarAmt end dollarAmt
+		     , format(ifnull(sum(a.amt), 0), '##0.######') as amt
+		     , format(ifnull(sum(a.qty), 0), '##0.######') as qty
+		     , a.storeSeq
+		     , a.zemosIdx
+		     , a.resultSeq
+		     , a.requestYn
+		     , a.cRequestYn
+		  from (
+		        select (select store_nm
+				          from ZM_SALES_STORE
+				         where a.zemos_idx = zemos_idx
+				           and a.wrkplc_idx = wrkplc_idx
+				           and a.store_seq = store_seq) as storeNm
+					  , date_format(a.result_dt, '%Y.%m.%d') as resultDt
+					  , a.dollar_amt as dollarAmt
+					  /*
+					  , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt
+        			         when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_amt
+        			         when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+        			         when c.request_yn = 'N' then d.result_amt
+        			         else 0 
+        		        end AS amt
+        		      , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.qty
+        			         when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_qty
+        			         when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+        			         when c.request_yn = 'N' then d.result_qty
+        			         else 0 
+        		        end AS qty
+					  */
+					  , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+				             when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+					         when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+					         when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+					         when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+	        				 when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+					         when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+					         else b.amt 
+				        end AS amt
+				      , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.qty
+				             when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.qty
+				             when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+				             when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+				             when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.result_qty
+				             when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+	        				 when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+					         when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+					         else b.qty 
+				        end AS qty
+					  , a.store_seq as storeSeq
+					  , a.zemos_idx as zemosIdx
+					  , a.result_seq as resultSeq
+					  , a.request_yn as requestYn
+					  , c.request_yn as cRequestYn
+				   from ZM_SALES_RESULT_MNG a
+				        inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.result_seq = b.result_seq and a.store_seq = b.store_seq
+				        left outer join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+				        and c.result_change_seq = (select max(result_change_seq) 
+						                             from ZM_SALES_HISTORY_MNG 
+						                            where  zemos_idx = a.zemos_idx
+						                              and wrkplc_idx = a.wrkplc_idx
+						                              and store_seq = a.store_seq
+                                            		  and result_seq = a.result_seq
+						                              /* and request_yn = 'Y' */
+						                          )
+					    left outer join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and b.item_seq = d.item_seq
+		          where 1 = 1
+		            and left(date_format(a.result_dt, '%Y%m%d'), 6) = #{yyyyMm}
+				    <if test='zemosIdx != null and zemosIdx != ""'>
+				    and a.zemos_idx = #{zemosIdx}
+				    </if>
+				    <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				    and a.wrkplc_idx = #{wrkplcIdx}
+				    </if>
+				    and a.store_seq in (select store_seq 
+				  						  from ZM_SALES_STORE 
+			   						     where 1=1 
+			   							   and zemos_idx = #{zemosIdx} 
+				   						   and wrkplc_idx = #{wrkplcIdx} 
+				   						   <if test='salesabun != null and salesabun != ""'>
+				   						   and (sabun = #{salesabun} or sabun2 = #{salesabun})
+				   						   </if>
+				   						   and use_yn = 'Y' 
+			   						   )
+		       ) a
+		 group by a.storeNm, a.resultDt, a.storeSeq, a.zemosIdx, a.resultSeq, a.requestYn
+		 order by a.resultDt desc
+		 <if test='start != null and start != "" and limit != null and limit != ""'>
+		 LIMIT ${start}, ${limit}
+		 </if>
+	</select>
+	
+	<!-- 실적등록현황 list -->
+	<select id="selectMyResultNew" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultNew */
+		SELECT 
+		f.resultSeq as resultSeq
+		, f.resultDetailSeq as resultDetailSeq
+		, f.unitSeq as unitSeq
+		, f.unitNm as unitNm
+		, CONVERT (IFNULL(sum(f.amt), '0') using utf8) as amt
+		, CONVERT (IFNULL(sum(f.qty), '0') using utf8) as qty
+		, f.onOffYn as onOffYn
+		, f.storeSeq as storeSeq
+		, f.storeNm as storeNm
+		, f.resultDt as resultDt
+		, f.requestYn as requestYn	
+		, f.hisYn as hisYn	
+		FROM
+		(
+			SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty), '0')  <![CDATA[ <> ]]> '0' then '0'
+                when IFNULL(sum(b.qty), '99')  = '0'then '0' end  as onOffYn 
+			, IFNULL(sum(b.qty), '0') as qty
+			, IFNULL(sum(b.amt), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn	
+			, b.his_yn as hisYn		
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty_on), '0')  <![CDATA[ <> ]]> '0' then '1'
+                when IFNULL(sum(b.qty_on), '99')  = '0'then '1' end  as onOffYn  
+			, IFNULL(sum(b.qty_on), '0') as qty
+			, IFNULL(sum(b.amt_on), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.hison_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2), '0')  <![CDATA[ <> ]]> '0' then '0'
+                when IFNULL(sum(b.qty2), '99')  = '0'then '0' end  as onOffYn
+			, IFNULL(sum(b.qty2), '0') as qty
+			, IFNULL(sum(b.amt2), '0') as amt
+			, b.unit_seq2  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his2_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2_on), '0')  <![CDATA[ <> ]]> '0' then '1'
+                when IFNULL(sum(b.qty2_on), '99')  = '0'then '1' end  as onOffYn
+			, IFNULL(sum(b.qty2_on), '0') as qty
+			, IFNULL(sum(b.amt2_on), '0') as amt
+			, b.unit_seq2 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his2on_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3), '0')  <![CDATA[ <> ]]> '0' then '0'
+                when IFNULL(sum(b.qty3), '99')  = '0'then '0' end  as onOffYn
+			, IFNULL(sum(b.qty3), '0') as qty
+			, IFNULL(sum(b.amt3), '0') as amt
+			, b.unit_seq3  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his3_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3_on), '0')  <![CDATA[ <> ]]> '0' then '1'
+                when IFNULL(sum(b.qty3_on), '99')  = '0'then '1' end  as onOffYn
+			, IFNULL(sum(b.qty3_on), '0') as qty
+			, IFNULL(sum(b.amt3_on), '0') as amt
+			, b.unit_seq3 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his3on_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4), '0')  <![CDATA[ <> ]]> '0' then '0'
+                when IFNULL(sum(b.qty4), '99')  = '0'then '0' end  as onOffYn
+			, IFNULL(sum(b.qty4), '0') as qty
+			, IFNULL(sum(b.amt4), '0') as amt
+			, b.unit_seq4  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his4_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4_on), '0')  <![CDATA[ <> ]]> '0' then '1'
+                when IFNULL(sum(b.qty4_on), '99')  = '0'then '1' end  as onOffYn
+			, IFNULL(sum(b.qty4_on), '0') as qty
+			, IFNULL(sum(b.amt4_on), '0') as amt
+			, b.unit_seq4 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his4on_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5), '0')  <![CDATA[ <> ]]> '0' then '0'
+                when IFNULL(sum(b.qty5), '99')  = '0'then '0' end  as onOffYn
+			, IFNULL(sum(b.qty5), '0') as qty
+			, IFNULL(sum(b.amt5), '0') as amt
+			, b.unit_seq5  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his5_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5_on), '0')  <![CDATA[ <> ]]> '0' then '1'
+                when IFNULL(sum(b.qty5_on), '99')  = '0'then '1' end  as onOffYn
+			, IFNULL(sum(b.qty5_on), '0') as qty
+			, IFNULL(sum(b.amt5_on), '0') as amt
+			, b.unit_seq5 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.his5on_yn as hisYn
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+		) f
+		where 1=1
+		and f.unitSeq is not null
+		<if test="searchYyyyMm != '' and searchYyyyMm != null">
+		and SUBSTR(f.resultDt, 1, 7) = #{searchYyyyMm}
+		</if>
+		<if test="storeSeq != '' and storeSeq != null">
+			and f.storeSeq = #{storeSeq}
+		</if>
+		and f.onOffYn IS NOT NULL
+		GROUP BY f.resultDt,f.storeNm,f.unitSeq,f.onOffYn
+			ORDER BY f.storeNm ASC, f.resultDt DESC , f.unitNm ASC, f.onOffYn ASC
+	</select>
+	
+	<!-- 실적등록현황 groupByItem list -->
+	<select id="selectMyResultNewItem" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultNewItem */
+		SELECT 
+		f.resultSeq as resultSeq
+		, f.resultDetailSeq as resultDetailSeq
+		, f.unitSeq as unitSeq
+		, f.unitNm as unitNm
+		, CONVERT (f.amt using utf8) as amt
+		, CONVERT (f.qty using utf8) as qty
+		, f.onOffYn as onOffYn
+		, f.storeSeq as storeSeq
+		, f.storeNm as storeNm
+		, f.resultDt as resultDt
+		, f.requestYn as requestYn		
+		, f.itemSeq as itemSeq		
+		, f.itemNm as itemNm		
+		FROM
+		(
+			SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+			, IFNULL(sum(b.qty), '0') as qty
+			, IFNULL(sum(b.amt), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn	
+			, b.item_seq as itemSeq			
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty_on IS NOT NULL then '1' ELSE NULL  END as onOffYn 
+			, IFNULL(sum(b.qty_on), '0') as qty
+			, IFNULL(sum(b.amt_on), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty2 IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+			, IFNULL(sum(b.qty2), '0') as qty
+			, IFNULL(sum(b.amt2), '0') as amt
+			, b.unit_seq2  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty2_on IS NOT NULL then '1' ELSE NULL  END as onOffYn 
+			, IFNULL(sum(b.qty2_on), '0') as qty
+			, IFNULL(sum(b.amt2_on), '0') as amt
+			, b.unit_seq2 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty3 IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+			, IFNULL(sum(b.qty3), '0') as qty
+			, IFNULL(sum(b.amt3), '0') as amt
+			, b.unit_seq3  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty3_on IS NOT NULL then '1' ELSE NULL  END as onOffYn 
+			, IFNULL(sum(b.qty3_on), '0') as qty
+			, IFNULL(sum(b.amt3_on), '0') as amt
+			, b.unit_seq3 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty4 IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+			, IFNULL(sum(b.qty4), '0') as qty
+			, IFNULL(sum(b.amt4), '0') as amt
+			, b.unit_seq4  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty4_on IS NOT NULL then '1' ELSE NULL  END as onOffYn 
+			, IFNULL(sum(b.qty4_on), '0') as qty
+			, IFNULL(sum(b.amt4_on), '0') as amt
+			, b.unit_seq4 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty5 IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+			, IFNULL(sum(b.qty5), '0') as qty
+			, IFNULL(sum(b.amt5), '0') as amt
+			, b.unit_seq5  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when b.qty5_on IS NOT NULL then '1' ELSE NULL  END as onOffYn 
+			, IFNULL(sum(b.qty5_on), '0') as qty
+			, IFNULL(sum(b.amt5_on), '0') as amt
+			, b.unit_seq5 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			, a.request_yn  as requestYn
+			, b.item_seq as itemSeq	
+			, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq, b.item_seq
+		) f
+		where 1=1
+		and f.unitSeq is not null
+		AND f.onOffYn IS NOT NULL
+		<if test="resultDt != '' and resultDt != null">
+		and f.resultDt = #{resultDt}
+		</if>
+		<if test="storeSeq != '' and storeSeq != null">
+			and f.storeSeq = #{storeSeq}
+		</if>
+		<if test="unitSeq != '' and unitSeq != null">
+			and f.unitSeq = #{unitSeq}
+		</if>
+		<if test="onOffYn != '' and onOffYn != null">
+			and f.onOffYn = #{onOffYn}
+		</if>
+			ORDER BY f.storeNm, f.resultDt, f.itemNm DESC 
+	</select>
+	<!--  수정요청 디테일 list -->
+	<select id="selectHistoryDetailItem" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectHistoryDetailItem */
+		SELECT 
+		a.resultSeq
+		, a.onOffYn
+		, CONVERT(a.resultQty, SIGNED INTEGER) as resultQty
+		, CONVERT(a.resultAmt, SIGNED INTEGER) as resultAmt
+		, CONVERT(a.changeQty, SIGNED INTEGER) as changeQty
+		, CONVERT(a.changeAmt, SIGNED INTEGER) as changeAmt
+		, a.unitSeq
+		, a.unitNm
+		, a.storeNm
+		, a.storeSeq
+		, a.requestYn
+		, a.itemSeq
+		, a.itemNm
+		, a.resultDetailSeq
+		, a.zemosIdx
+		, a.historySeq
+		, a.resultChangeSeq
+		, a.detailHistorySeq
+		FROM 
+		(
+		SELECT  
+					a.result_seq as resultSeq 
+					, case when b.result_qty IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result_qty), '0') as resultQty
+					, IFNULL(sum(b.result_amt), '0') as resultAmt
+					, IFNULL(sum(b.change_qty), '0') as changeQty
+					, IFNULL(sum(b.change_amt), '0') as changeAmt
+					, b.unit_seq1  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					 <choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					 UNION ALL 
+					 SELECT  
+					 a.result_seq as resultSeq 
+					, case when b.result_qty_on IS NOT NULL then '1' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result_qty_on), '0') as resultQty
+					, IFNULL(sum(b.result_amt_on), '0') as resultAmt
+					, IFNULL(sum(b.change_qty_on), '0') as changeQty
+					, IFNULL(sum(b.change_amt_on), '0') as changeAmt
+					, b.unit_seq1  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	 
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					 <choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					 ##unit2
+					 UNION ALL 
+					 SELECT  
+					a.result_seq as resultSeq 
+					, case when b.result2_qty IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result2_qty), '0') as resultQty
+					, IFNULL(sum(b.result2_amt), '0') as resultAmt
+					, IFNULL(sum(b.change2_qty), '0') as changeQty
+					, IFNULL(sum(b.change2_amt), '0') as changeAmt
+					, b.unit_seq2  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					 <choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					 UNION ALL 
+					 SELECT  
+					 a.result_seq as resultSeq 
+					, case when b.result2_qty_on IS NOT NULL then '1' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result2_qty_on), '0') as resultQty
+					, IFNULL(sum(b.result2_amt_on), '0') as resultAmt
+					, IFNULL(sum(b.change2_qty_on), '0') as changeQty
+					, IFNULL(sum(b.change2_amt_on), '0') as changeAmt
+					, b.unit_seq2  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq 
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					 <choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					  ##unit3
+					 UNION ALL 
+					 SELECT  
+					a.result_seq as resultSeq 
+					, case when b.result3_qty IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result3_qty), '0') as resultQty
+					, IFNULL(sum(b.result3_amt), '0') as resultAmt
+					, IFNULL(sum(b.change3_qty), '0') as changeQty
+					, IFNULL(sum(b.change3_amt), '0') as changeAmt
+					, b.unit_seq3  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq3) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					 <choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					 UNION ALL 
+					 SELECT  
+					 a.result_seq as resultSeq 
+					, case when b.result3_qty_on IS NOT NULL then '1' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result3_qty_on), '0') as resultQty
+					, IFNULL(sum(b.result3_amt_on), '0') as resultAmt
+					, IFNULL(sum(b.change3_qty_on), '0') as changeQty
+					, IFNULL(sum(b.change3_amt_on), '0') as changeAmt
+					, b.unit_seq3  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq3) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	 
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					 <choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					  ##unit4
+					 UNION ALL 
+					 SELECT  
+					a.result_seq as resultSeq 
+					, case when b.result4_qty IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result4_qty), '0') as resultQty
+					, IFNULL(sum(b.result4_amt), '0') as resultAmt
+					, IFNULL(sum(b.change4_qty), '0') as changeQty
+					, IFNULL(sum(b.change4_amt), '0') as changeAmt
+					, b.unit_seq4  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq4) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					 and a.wrkplc_idx = #{wrkplcIdx}
+					 and a.history_seq = b.history_seq
+					 and c.store_seq = a.store_seq
+					<choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					 UNION ALL 
+					 SELECT  
+					 a.result_seq as resultSeq 
+					, case when b.result4_qty_on IS NOT NULL then '1' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result4_qty_on), '0') as resultQty
+					, IFNULL(sum(b.result4_amt_on), '0') as resultAmt
+					, IFNULL(sum(b.change4_qty_on), '0') as changeQty
+					, IFNULL(sum(b.change4_amt_on), '0') as changeAmt
+					, b.unit_seq4  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq4) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	 
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					and a.wrkplc_idx = #{wrkplcIdx}
+					and a.history_seq = b.history_seq
+					and c.store_seq = a.store_seq
+					<choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					  ##unit5
+					 UNION ALL 
+					 SELECT  
+					a.result_seq as resultSeq 
+					, case when b.result5_qty IS NOT NULL then '0' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result5_qty), '0') as resultQty
+					, IFNULL(sum(b.result5_amt), '0') as resultAmt
+					, IFNULL(sum(b.change5_qty), '0') as changeQty
+					, IFNULL(sum(b.change5_amt), '0') as changeAmt
+					, b.unit_seq5  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					and a.wrkplc_idx = #{wrkplcIdx}
+					and a.history_seq = b.history_seq
+					and c.store_seq = a.store_seq
+					<choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					UNION ALL 
+					 SELECT  
+					 a.result_seq as resultSeq 
+					, case when b.result5_qty_on IS NOT NULL then '1' ELSE NULL END  as onOffYn 
+					, IFNULL(sum(b.result5_qty_on), '0') as resultQty
+					, IFNULL(sum(b.result5_amt_on), '0') as resultAmt
+					, IFNULL(sum(b.change5_qty_on), '0') as changeQty
+					, IFNULL(sum(b.change5_amt_on), '0') as changeAmt
+					, b.unit_seq5  as unitSeq
+					, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+					, c.store_nm as storeNm
+					, c.store_seq  as storeSeq
+					, a.request_yn  as requestYn 	
+					, b.item_seq as itemSeq 			
+					, (SELECT item_nm FROM ZM_SALES_ITEM WHERE b.item_seq = item_seq) as itemNm	 
+					, (SELECT d.result_detail_seq FROM ZM_SALES_RESULT_L_DETAIL d WHERE a.result_seq = d.result_seq and d.item_seq = b.item_seq) as resultDetailSeq
+					, a.zemos_idx as zemosIdx
+					, a.history_seq as historySeq
+					, a.result_change_seq as resultChangeSeq
+					, b.detail_history_seq as detailHistorySeq
+					FROM ZM_SALES_HISTORY_MNG a, ZM_SALES_HISTORY_DETAIL b , ZM_SALES_STORE c
+					WHERE 1=1 
+					and a.zemos_idx = #{zemosIdx}	
+					and a.wrkplc_idx = #{wrkplcIdx}
+					and a.history_seq = b.history_seq
+					and c.store_seq = a.store_seq
+					<choose>
+					<when test='pages == "record" or pages == "record2"'>
+						and a.request_yn IS NOT NULL			
+						GROUP BY  a.result_seq, b.item_seq, a.reg_dttm
+					</when>
+					<otherwise>	
+						and a.request_yn = #{requestYn}				
+						GROUP BY  a.result_seq, b.item_seq
+					</otherwise>
+					</choose>
+					
+		) a
+		WHERE 1=1
+		<if test='storeSeq != "" and storeSeq != null'>
+		and a.storeSeq = #{storeSeq}
+		</if>
+		and a.onOffYn IS NOT NULL  
+		ORDER BY a.historySeq, a.itemNm
+	</select>
+	
+	<!-- 나의등록현황 total -->
+	<select id="selectMyResultTot" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultTot */
+		select sum(a.amt) as amt
+		     , sum(a.qty) as qty
+		     , sum(a.dollarAmt) as dollarAmt
+		  from (
+		        select case when a.dollarAmt is null or a.dollarAmt = '' then 0 else a.dollarAmt end dollarAmt
+		             , sum(a.amt) as amt
+		             , sum(a.qty) as qty
+		          from (
+		                select (select store_nm
+		                          from ZM_SALES_STORE
+		                         where a.zemos_idx = zemos_idx
+		                           and a.wrkplc_idx = wrkplc_idx
+		                           and a.store_seq = store_seq) as storeNm
+		                     , date_format(a.result_dt, '%Y.%m.%d') as resultDt
+		                     , a.dollar_amt as dollarAmt
+		                     /*
+		                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt
+		        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_amt
+		        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+		        			        when c.request_yn = 'N' then d.result_amt
+		        			        else 0 
+		        		       end AS amt
+		        		     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.qty
+		        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_qty
+		        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+		        			        when c.request_yn = 'N' then d.result_qty
+		        			        else 0 
+		        		       end AS qty
+						     */
+						     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+						            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+							        when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+							        when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+							        when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+			        			 when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+							        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+							        else b.amt 
+						       end AS amt
+						     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.qty
+						            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.qty
+						            when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+						            when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+						            when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.result_qty
+						            when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+			        			 when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+							        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+							        else b.qty 
+						       end AS qty
+						     , a.store_seq as storeSeq
+		                     , a.zemos_idx as zemosIdx
+		                     , a.result_seq as resultSeq
+		                  from ZM_SALES_RESULT_MNG a
+		                       inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.result_seq = b.result_seq and a.store_seq = b.store_seq
+		                       left outer join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+		                       and c.result_change_seq = (select max(result_change_seq) 
+								                             from ZM_SALES_HISTORY_MNG 
+								                            where  zemos_idx = a.zemos_idx
+								                              and wrkplc_idx = a.wrkplc_idx
+								                              and store_seq = a.store_seq
+		                                            		  and result_seq = a.result_seq
+								                              /* and request_yn = 'Y' */
+								                          )
+		                       left outer join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and b.item_seq = d.item_seq
+		                 where 1 = 1
+		                   and left(date_format(a.result_dt, '%Y%m%d'), 6) = #{yyyyMm}
+		                   <if test='zemosIdx != null and zemosIdx != ""'>
+						   and a.zemos_idx = #{zemosIdx}
+						   </if>
+						   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+						   and a.wrkplc_idx = #{wrkplcIdx}
+						   </if>
+						   and a.store_seq in (select store_seq 
+						  						 from ZM_SALES_STORE 
+					   						    where 1=1 
+					   							  and zemos_idx = #{zemosIdx} 
+						   						  and wrkplc_idx = #{wrkplcIdx} 
+						   						  <if test='salesabun != null and salesabun != ""'>
+						   						  and (sabun = #{salesabun} or sabun2 = #{salesabun})
+						   						  </if>
+						   						  and use_yn = 'Y' 
+					   						   )
+		               ) a
+		         group by a.storeNm, a.resultDt, a.storeSeq, a.zemosIdx, a.resultSeq
+		       ) a
+	</select>
+	<!-- 실적등록현황 total -->
+	<select id="selectMyResultTotNew" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultTotNew */
+		SELECT 
+		f.unitNm as unitNm
+		, CONVERT(sum(f.amt), SIGNED INTEGER) AS amt
+		, CONVERT(sum(f.qty), SIGNED INTEGER) AS qty
+		, f.onOffYn as onOffYn
+		FROM
+		(
+			SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty), '0')   <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty), '0') as qty
+			, IFNULL(sum(b.amt), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty_on), '99')  = '0'then '1'  end  as onOffYn
+			, IFNULL(sum(b.qty_on), '0') as qty
+			, IFNULL(sum(b.amt_on), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty2), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty2), '0') as qty
+			, IFNULL(sum(b.amt2), '0') as amt
+			, b.unit_seq2  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty2_on), '99')  = '0'then '1'  end  as onOffYn
+			, IFNULL(sum(b.qty2_on), '0') as qty
+			, IFNULL(sum(b.amt2_on), '0') as amt
+			, b.unit_seq2 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty3), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty3), '0') as qty
+			, IFNULL(sum(b.amt3), '0') as amt
+			, b.unit_seq3  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty3_on), '99')  = '0'then '1'  end  as onOffYn
+			, IFNULL(sum(b.qty3_on), '0') as qty
+			, IFNULL(sum(b.amt3_on), '0') as amt
+			, b.unit_seq3 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty4), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty4), '0') as qty
+			, IFNULL(sum(b.amt4), '0') as amt
+			, b.unit_seq4  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty4_on), '99')  = '0'then '1'  end  as onOffYn
+			, IFNULL(sum(b.qty4_on), '0') as qty
+			, IFNULL(sum(b.amt4_on), '0') as amt
+			, b.unit_seq4 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5), '0')    <![CDATA[ <> ]]>   '0' then '0'
+                when IFNULL(sum(b.qty5), '99')  = '0'then '0'  end  as onOffYn 
+			, IFNULL(sum(b.qty5), '0') as qty
+			, IFNULL(sum(b.amt5), '0') as amt
+			, b.unit_seq5  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5_on), '0')    <![CDATA[ <> ]]>   '0' then '1'
+                when IFNULL(sum(b.qty5_on), '99')  = '0'then '1'  end  as onOffYn 
+			, IFNULL(sum(b.qty5_on), '0') as qty
+			, IFNULL(sum(b.amt5_on), '0') as amt
+			, b.unit_seq5 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+		) f
+		where 1=1
+		and f.unitSeq is not null
+		<if test="searchYyyyMm != '' and searchYyyyMm != null">
+		and SUBSTR(f.resultDt, 1, 7) = #{searchYyyyMm}
+		</if>
+		<if test="storeSeq != '' and storeSeq != null">
+			and f.storeSeq = #{storeSeq}
+		</if>
+		AND f.onOffYn IS NOT NULL
+		GROUP by f.storeSeq,f.onOffYn, f.unitSeq
+	</select>
+	
+	<!-- 실적등록현황 total -->
+	<select id="selectMyResultTotNewNoOnOff" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectMyResultTotNewNoOnOff */
+		SELECT 
+		f.unitNm as unitNm
+		, CONVERT(sum(f.amt), SIGNED INTEGER) AS amt
+		, CONVERT(sum(f.qty), SIGNED INTEGER) AS qty
+		FROM
+		(
+			SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty), '0')  > 0 then '0' else '1' end  as onOffYn 
+			, IFNULL(sum(b.qty), '0') as qty
+			, IFNULL(sum(b.amt), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty_on), '0')  > 0 then '1' else '0' end  as onOffYn 
+			, IFNULL(sum(b.qty_on), '0') as qty
+			, IFNULL(sum(b.amt_on), '0') as amt
+			, b.unit_seq1  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq1) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2), '0')  > 0 then '0' else '1' end  as onOffYn 
+			, IFNULL(sum(b.qty2), '0') as qty
+			, IFNULL(sum(b.amt2), '0') as amt
+			, b.unit_seq2  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty2_on), '0')  > 0 then '1' else '0' end  as onOffYn 
+			, IFNULL(sum(b.qty2_on), '0') as qty
+			, IFNULL(sum(b.amt2_on), '0') as amt
+			, b.unit_seq2 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq2) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3), '0')  > 0 then '0' else '1' end  as onOffYn 
+			, IFNULL(sum(b.qty3), '0') as qty
+			, IFNULL(sum(b.amt3), '0') as amt
+			, b.unit_seq3  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty3_on), '0')  > 0 then '1' else '0' end  as onOffYn 
+			, IFNULL(sum(b.qty3_on), '0') as qty
+			, IFNULL(sum(b.amt3_on), '0') as amt
+			, b.unit_seq3 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4), '0')  > 0 then '0' else '1' end  as onOffYn 
+			, IFNULL(sum(b.qty4), '0') as qty
+			, IFNULL(sum(b.amt4), '0') as amt
+			, b.unit_seq4  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty4_on), '0')  > 0 then '1' else '0' end  as onOffYn 
+			, IFNULL(sum(b.qty4_on), '0') as qty
+			, IFNULL(sum(b.amt4_on), '0') as amt
+			, b.unit_seq4 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 union ALL 
+			 SELECT  
+			a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5), '0')  > 0 then '0' else '1' end  as onOffYn 
+			, IFNULL(sum(b.qty5), '0') as qty
+			, IFNULL(sum(b.amt5), '0') as amt
+			, b.unit_seq5  as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+			 UNION ALL 
+			 SELECT  
+			  a.result_seq as resultSeq 
+			, a.result_dt  as resultDt
+			, b.result_detail_seq as resultDetailSeq
+			, case when IFNULL(sum(b.qty5_on), '0')  > 0 then '1' else '0' end  as onOffYn 
+			, IFNULL(sum(b.qty5_on), '0') as qty
+			, IFNULL(sum(b.amt5_on), '0') as amt
+			, b.unit_seq5 as unitSeq
+			, (SELECT unit_nm FROM ZM_SALES_UNIT WHERE unit_seq = b.unit_seq5) as unitNm
+			, c.store_nm as storeNm
+			, c.store_seq  as storeSeq
+			FROM ZM_SALES_RESULT_L_MNG a, ZM_SALES_RESULT_L_DETAIL b , ZM_SALES_STORE c
+			WHERE 1=1 
+			<if test="zemosIdx != '' and zemosIdx != null">
+			and a.zemos_idx = #{zemosIdx}	
+			</if>			
+			<if test="wrkplcIdx != '' and wrkplcIdx != null">	   						 
+			 and a.wrkplc_idx = #{wrkplcIdx}
+			 </if>
+			 and a.result_seq = b.result_seq 
+			 and c.store_seq = a.store_seq
+			 GROUP BY  a.result_seq
+		) f
+		where 1=1
+		and f.unitSeq is not null
+		<if test="searchYyyyMm != '' and searchYyyyMm != null">
+		and SUBSTR(f.resultDt, 1, 7) = #{searchYyyyMm}
+		</if>
+		<if test="storeSeq != '' and storeSeq != null">
+			and f.storeSeq = #{storeSeq}
+		</if>
+		GROUP by f.storeSeq, f.unitSeq
+	</select>
+	
+	<!-- 히스토리테이블 cnt -->
+	<select id="selectHistoryCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer" >
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectHistoryCnt */
+		SELECT COUNT(*) 
+		FROM ZM_SALES_HISTORY_MNG 
+		WHERE 1=1
+		AND  zemos_idx = #{zemosIdx}
+		AND  wrkplc_idx = #{wrkplcIdx}
+		AND  store_seq = #{storeSeq}
+		AND  result_seq = #{resultSeq}
+		AND  request_yn = #{requestYn}
+	</select>
+	
+	<!-- 히스토리디테일테이블 cnt -->
+	<select id="selectHistoryDetailCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer" >
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectHistoryDetailCnt */
+		SELECT COUNT(*) 
+		FROM ZM_SALES_HISTORY_DETAIL 
+		WHERE 1=1
+		AND  history_seq = #{historySeq}
+		AND  zemos_idx = #{zemosIdx}
+		AND  wrkplc_idx = #{wrkplcIdx}
+		AND  store_seq = #{storeSeq}
+		AND  item_seq = #{itemSeq}
+		AND  modify_dt = #{modifyDt}
+		<if test='unitSeq1 != null and unitSeq1 != ""'>
+			<if test='onOffYn == "0"'>
+				AND  change_amt IS NOT NULL 
+				AND  change_qty IS NOT NULL 
+			</if>
+			<if test='onOffYn == "1"'>
+				AND  change_amt_on IS NOT NULL 
+				AND  change_amt_on IS NOT NULL 
+			</if>
+		</if>
+		<if test='unitSeq2 != null and unitSeq2 != ""'>
+			<if test='onOffYn == "0"'>
+				AND  change2_amt IS NOT NULL 
+				AND  change2_qty IS NOT NULL 
+			</if>
+			<if test='onOffYn == "1"'>
+				AND  change2_amt_on IS NOT NULL 
+				AND  change2_amt_on IS NOT NULL 
+			</if>
+		</if>
+		<if test='unitSeq3 != null and unitSeq3 != ""'>
+			<if test='onOffYn == "0"'>
+				AND  change3_amt IS NOT NULL 
+				AND  change3_qty IS NOT NULL 
+			</if>
+			<if test='onOffYn == "1"'>
+				AND  change3_amt_on IS NOT NULL 
+				AND  change3_amt_on IS NOT NULL 
+			</if>
+		</if>
+		<if test='unitSeq4 != null and unitSeq4 != ""'>
+			<if test='onOffYn == "0"'>
+				AND  change4_amt IS NOT NULL 
+				AND  change4_qty IS NOT NULL 
+			</if>
+			<if test='onOffYn == "1"'>
+				AND  change4_amt_on IS NOT NULL 
+				AND  change4_amt_on IS NOT NULL 
+			</if>
+		</if>
+		<if test='unitSeq5 != null and unitSeq5 != ""'>
+			<if test='onOffYn == "0"'>
+				AND  change5_amt IS NOT NULL 
+				AND  change5_qty IS NOT NULL 
+			</if>
+			<if test='onOffYn == "1"'>
+				AND  change5_amt_on IS NOT NULL 
+				AND  change5_amt_on IS NOT NULL 
+			</if>
+		</if>
+	</select>
+	<!-- History Detail 조회 -->
+	<select id="salesHistoryDetailForHistorySeq" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.salesHistoryDetailForHistorySeq */
+		SELECT *
+		FROM ZM_SALES_HISTORY_DETAIL
+		WHERE history_seq = #{historySeq}
+	</select>	
+	<!-- History Master 조회 -->
+	<select id="salesHistoryMng" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.salesHistoryMng */
+		select a.historySeq
+			 , a.zemosIdx
+			 , a.storeSeq
+			 , a.resultSeq
+			 , a.description
+			 , a.rejectDesc
+			 , a.modifyDt /* 실적일자 */
+			 , a.regUser
+			 , a.regDttm  /* 요청일자 */
+			 , a.requestName
+			 , a.fileOwner
+			 , (select idx from ZM_ATCHMNFL where a.fileOwner = file_owner) as idx
+			 , a.requestYn
+			 , a.storeNm
+		  from (
+				select a.history_seq as historySeq
+					 , a.zemos_idx as zemosIdx
+					 , a.store_seq as storeSeq
+					 , a.result_seq as resultSeq
+					 , a.description as description
+					 , a.reject_desc as rejectDesc
+					 , date_format(b.modify_dt, '%Y-%m-%d') as modifyDt
+					 , a.reg_user as regUser
+					 , date_format(a.reg_dttm, '%Y-%m-%d') as regDttm
+					 , (select name from ZM_USER where idx = a.reg_user) as requestName
+					 , (select file_owner from ZM_SALES_RESULT_MNG where a.zemos_idx = zemos_idx and a.wrkplc_idx = wrkplc_idx and a.store_seq = store_seq and a.result_seq = result_seq) as fileOwner
+				  	 , a.request_yn as requestYn
+				  	 , (select store_nm from ZM_SALES_STORE where a.store_seq = store_seq) as storeNm
+				  from ZM_SALES_HISTORY_MNG a
+				       inner join ZM_SALES_HISTORY_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.history_seq = b.history_seq
+				 where 1 = 1
+				   and a.zemos_idx = #{zemosIdx}
+			       and a.wrkplc_idx = #{wrkplcIdx}
+			       <if test='storeSeq != null and storeSeq != ""'>
+			       and a.store_seq = #{storeSeq}
+			       </if>
+			       and a.result_seq = #{resultSeq}
+			       and a.result_change_seq = (select max(result_change_seq) 
+										  		from ZM_SALES_HISTORY_MNG 
+											   where zemos_idx = a.zemos_idx
+												 and wrkplc_idx = a.wrkplc_idx
+												 and store_seq = a.store_seq
+												 and result_seq = a.result_seq)
+		       ) a
+		 group by a.modifyDt
+	</select>
+	
+	<!-- History Master List조회 -->
+	<select id="salesHistoryMngList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.salesHistoryMngList */
+		SELECT 
+		a.result_seq as resultSeq
+		, a.history_seq as historySeq 
+		, (SELECT result_dt FROM ZM_SALES_RESULT_MNG WHERE a.result_seq = result_seq) as modifyDt
+		, date_format(a.reg_dttm, '%Y-%m-%d') as regDt
+		, (select name from ZM_USER where idx = a.reg_user) as requestName
+		, a.request_yn as requestYn
+		, a.reject_desc as rejectDesc
+		,(select name from ZM_USER where idx = a.mod_user) as rejectUser
+		, date_format(a.reg_dttm, '%Y-%m-%d %H:%i') as regDttm
+ 		, date_format(a.mod_dttm, '%Y-%m-%d %H:%i') as modDttm
+		FROM ZM_SALES_HISTORY_MNG a
+		WHERE 1=1 
+		and a.zemos_idx = #{zemosIdx}
+		and a.wrkplc_idx = #{wrkplcIdx}
+		<if test='storeSeq != null and storeSeq != ""'>
+		and a.store_seq = #{storeSeq}
+		</if>
+	</select>
+	
+	<!-- 사용자 실적등록 Detail 조회 -->
+	<select id="selectUserResultDetailList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectUserResultDetailList */
+		SELECT d.history_seq AS historySeq
+			 , d.detail_history_seq AS detailHistorySeq
+			 , a.result_detail_seq as resultDetailSeq
+			 , a.result_seq as resultSeq
+			 , c.result_change_seq as resultChangeSeq
+			 , a.zemos_idx as zemosIdx
+			 , a.wrkplc_idx as wrkplcIdx
+			 , a.store_seq as storeSeq
+			 , a.item_seq as itemSeq
+			 , (select item_nm from ZM_SALES_ITEM c where c.item_seq = a.item_seq and c.wrkplc_idx = a.wrkplc_idx) as itemNm
+		     , case when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and (c.request_yn is null or c.request_yn = '') then a.amt
+		            when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and c.request_yn = 'W' then a.amt
+			        when (b.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+			        when (b.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.amt
+			        when (b.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+			        when (b.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.amt
+		            when (b.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+			        else a.amt
+		       end AS amt
+		     , case when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and (c.request_yn is null or c.request_yn = '') then a.qty
+		            when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and c.request_yn = 'W' then a.qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+			        when (b.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y') then d.result_qty
+			        when (b.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+			        else a.qty 
+		       end AS qty
+			 , case when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and (c.request_yn is null or c.request_yn = '') then a.amt  
+		            when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and c.request_yn = 'W' then d.change_amt
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.amt 
+		            when (b.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+			        when (b.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.amt
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y') then d.change_amt
+			        when (b.request_yn = 'Y' and c.request_yn = 'W') then d.change_amt
+			        else a.amt 
+		       end AS changeAmt
+		     , case when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and (c.request_yn is null or c.request_yn = '') then a.qty  
+		            when (b.request_yn = 'W' or b.request_yn = 'D' or b.request_yn is null or b.request_yn = '') and c.request_yn = 'W' then d.change_qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.qty 
+		            when (b.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+			        when (b.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then a.qty
+		            when (b.request_yn = 'Y' and c.request_yn = 'Y') then d.change_qty
+			        when (b.request_yn = 'Y' and c.request_yn = 'W') then d.change_qty
+			        else a.qty 
+		       end AS changeQty
+			 , a.reg_dttm as regDttm
+			 , a.reg_user as regUser
+			 , a.mod_dttm as modDttm
+			 , a.mod_user as modUser
+			 , b.request_yn as rRequestYn
+	 		 , c.request_yn as hRequestYn
+		  from ZM_SALES_RESULT_DETAIL a
+		       inner join ZM_SALES_RESULT_MNG b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.result_seq = b.result_seq and a.store_seq = b.store_seq
+       		   <if test='cRequestYn != "W"'>
+       		   left outer join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+       		   and c.result_change_seq = (select max(result_change_seq) 
+			                                from ZM_SALES_HISTORY_MNG 
+			                               where zemos_idx = a.zemos_idx
+			                                 and wrkplc_idx = a.wrkplc_idx
+			                                 and store_seq = a.store_seq
+			                                 and result_seq = a.result_seq)
+       		   left outer join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and a.item_seq = d.item_seq
+       		   </if>
+       		   <if test='cRequestYn == "W"'>
+       		   inner join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+       		   and c.result_change_seq = (select max(result_change_seq) 
+			                                from ZM_SALES_HISTORY_MNG 
+			                               where zemos_idx = a.zemos_idx
+			                                 and wrkplc_idx = a.wrkplc_idx
+			                                 and store_seq = a.store_seq
+			                                 and result_seq = a.result_seq)
+       		   inner join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and a.item_seq = d.item_seq
+       		   </if>
+		 where 1 = 1
+		   <if test='resultSeq != null and resultSeq != ""'>
+		   and a.result_seq = #{resultSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   <if test='resultDt != null and resultDt != ""'>
+		   and date_format(b.result_dt, '%Y%m%d') = date_format(#{resultDt}, '%Y%m%d')
+		   </if>
+		   <if test='requestYnSearch != null and requestYnSearch != ""'>
+		   and b.request_yn = #{requestYnSearch}
+		   </if>
+	</select>
+	
+	<!-- 수정요청 history Master Save -->
+	<insert id="saveMasterResult" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="history_seq">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.saveMasterResult */
+		insert into ZM_SALES_HISTORY_MNG
+		(
+			history_seq
+			, zemos_idx
+			, wrkplc_idx
+			, store_seq
+			, result_seq
+			, result_change_seq
+			, request_yn
+			, description
+			, reject_desc
+			, file_owner
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		) values (
+			#{history_seq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeSeq}
+			, #{resultSeq}
+			, (select result_change_seq 
+			     from (select ifnull(max(result_change_seq) + 1, 1) AS result_change_seq
+					     from ZM_SALES_HISTORY_MNG
+					    where zemos_idx  = #{zemosIdx}
+					      and wrkplc_idx = #{wrkplcIdx}
+					      and store_seq  = #{storeSeq}
+					      and result_seq = #{resultSeq}) as temp)
+			, #{requestYn}
+			, #{description}
+			, #{rejectDesc}
+			, #{fileOwner}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+		<selectKey resultType="int" keyProperty="history_seq" order="AFTER">
+        	SELECT LAST_INSERT_ID()
+    	</selectKey>
+	</insert>
+	
+	<!-- 수정요청 history detail Save -->
+	<insert id="saveDetailResult" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="detail_history_seq">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.saveDetailResult */
+		insert into ZM_SALES_HISTORY_DETAIL
+		(
+			history_seq
+			, zemos_idx
+			, wrkplc_idx
+			, store_seq
+			, item_seq
+			, modify_dt
+			, result_amt
+			, result_qty
+			, change_amt
+			, change_qty
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		) values (
+			#{historySeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeSeq}
+			, #{itemSeq}
+			, DATE_FORMAT(#{modifyDt}, '%Y%m%d')
+			, replace(#{resultAmt}, ',', '')
+			, replace(#{resultQty}, ',', '')
+			, ifnull(replace(#{changeAmt}, ',', ''), null)
+			, ifnull(replace(#{changeQty}, ',', ''), null)
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{modUserSeq}
+		)
+	</insert>
+	
+	<!-- 수정요청 history detail Save New -->
+	<insert id="saveDetailResultNew" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="detail_history_seq">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.saveDetailResultNew */
+		INSERT INTO zenielm.ZM_SALES_HISTORY_DETAIL
+		(
+			history_seq
+			, zemos_idx
+			, wrkplc_idx
+			, store_seq
+			, item_seq
+			<if test='unitSeq1 != null and unitSeq1 != ""'>
+			, unit_seq1
+			, result_amt
+			, result_qty
+			, change_amt
+			, change_qty
+			, result_amt_on
+			, result_qty_on
+			, change_amt_on
+			, change_qty_on
+			</if>
+			<if test='unitSeq2 != null and unitSeq2 != ""'>
+			, unit_seq2
+			, result2_amt
+			, result2_qty
+			, change2_amt
+			, change2_qty
+			, result2_amt_on
+			, result2_qty_on
+			, change2_amt_on
+			, change2_qty_on
+			</if>
+			<if test='unitSeq3 != null and unitSeq3 != ""'>
+			, unit_seq3
+			, result3_amt
+			, result3_qty
+			, change3_amt
+			, change3_qty
+			, result3_amt_on
+			, result3_qty_on
+			, change3_amt_on
+			, change3_qty_on
+			</if>
+			<if test='unitSeq4 != null and unitSeq4 != ""'>
+			, unit_seq4
+			, result4_amt
+			, result4_qty
+			, change4_amt
+			, change4_qty
+			, result4_amt_on
+			, result4_qty_on
+			, change4_amt_on
+			, change4_qty_on
+			</if>
+			<if test='unitSeq5 != null and unitSeq5 != ""'>
+			, unit_seq5
+			, result5_amt
+			, result5_qty
+			, change5_amt
+			, change5_qty
+			, result5_amt_on
+			, result5_qty_on
+			, change5_amt_on
+			, change5_qty_on
+			</if>
+			, modify_dt
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		) VALUES (
+			#{historySeq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{storeSeq}
+			, #{itemSeq}
+			<if test='unitSeq1 != null and unitSeq1 != ""'>
+			, #{unitSeq1}
+			, #{resultAmt}
+			, #{resultQty}
+			, #{changeAmt}
+			, #{changeQty}
+			, #{resultAmtOn}
+			, #{resultQtyOn}
+			, #{changeAmtOn}
+			, #{changeQtyOn}
+			</if>
+			<if test='unitSeq2 != null and unitSeq2 != ""'>
+			, #{unitSeq2}
+			, #{result2Amt}
+			, #{result2Qty}
+			, #{change2Amt}
+			, #{change2Qty}
+			, #{result2AmtOn}
+			, #{result2QtyOn}
+			, #{change2AmtOn}
+			, #{change2QtyOn}
+			</if>
+			<if test='unitSeq3 != null and unitSeq3 != ""'>
+			, #{unitSeq3}
+			, #{result3Amt}
+			, #{result3Qty}
+			, #{change3Amt}
+			, #{change3Qty}
+			, #{result3AmtOn}
+			, #{result3QtyOn}
+			, #{change3AmtOn}
+			, #{change3QtyOn}
+			</if>
+			<if test='unitSeq4 != null and unitSeq4 != ""'>
+			, #{unitSeq4}
+			, #{result4Amt}
+			, #{result4Qty}
+			, #{change4Amt}
+			, #{change4Qty}
+			, #{result4AmtOn}
+			, #{result4QtyOn}
+			, #{change4AmtOn}
+			, #{change4QtyOn}
+			</if>
+			<if test='unitSeq5 != null and unitSeq5 != ""'>
+			, #{unitSeq5}
+			, #{result5Amt}
+			, #{result5Qty}
+			, #{change5Amt}
+			, #{change5Qty}
+			, #{result5AmtOn}
+			, #{result5QtyOn}
+			, #{change5AmtOn}
+			, #{change5QtyOn}
+			</if>
+			, #{modifyDt}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{modUserSeq}
+		)
+	</insert>
+	
+	<!-- ResultDetailAllCnt ALL 값 조회-->
+	<select id="selectUserResultDetailAllCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectUserResultDetailAllCnt */
+		SELECT COUNT(b.request_yn) as requestAllCnt
+		  from ZM_SALES_RESULT_DETAIL a
+		       inner join ZM_SALES_RESULT_MNG b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.result_seq = b.result_seq and a.store_seq = b.store_seq
+       		   left outer join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+       		   left outer join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and a.item_seq = d.item_seq
+		 where 1 = 1
+		   <if test='resultSeq != null and resultSeq != ""'>
+		   and a.result_seq = #{resultSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   <if test='resultDt != null and resultDt != ""'>
+		   and date_format(b.result_dt, '%Y%m%d') = date_format(#{resultDt}, '%Y%m%d')
+		   </if>
+	</select>
+	
+	<!-- selectUserResultDetailYNCnt 값 조회-->
+	<select id="selectUserResultDetailYNCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectUserResultDetailYNCnt */
+		SELECT COUNT(b.request_yn) as requestYnCnt
+		  from ZM_SALES_RESULT_DETAIL a
+		       inner join ZM_SALES_RESULT_MNG b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.result_seq = b.result_seq and a.store_seq = b.store_seq
+       		   left outer join ZM_SALES_HISTORY_MNG c on b.zemos_idx = c.zemos_idx and b.wrkplc_idx = c.wrkplc_idx and b.store_seq = c.store_seq and b.result_seq = c.result_seq
+       		   left outer join ZM_SALES_HISTORY_DETAIL d on b.zemos_idx = d.zemos_idx and b.wrkplc_idx = d.wrkplc_idx and b.store_seq = d.store_seq and c.history_seq = d.history_seq and a.item_seq = d.item_seq
+		 where 1 = 1
+		   <if test='resultSeq != null and resultSeq != ""'>
+		   and a.result_seq = #{resultSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and a.zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and a.wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='storeSeq != null and storeSeq != ""'>
+		   and a.store_seq = #{storeSeq}
+		   </if>
+		   <if test='resultDt != null and resultDt != ""'>
+		   and date_format(b.result_dt, '%Y%m%d') = date_format(#{resultDt}, '%Y%m%d')
+		   </if>
+		   AND b.request_yn IN ('Y', 'N')
+	</select>
+	
+	<!-- delete history detail -->
+	<delete id="deleteDetailHistory" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.deleteDetailHistory */
+		delete
+		  from ZM_SALES_HISTORY_DETAIL
+		 where 1 = 1
+		   <if test="detailHistorySeq != null and detailHistorySeq != ''">
+		   and detail_history_seq = #{detailHistorySeq}
+		   </if>
+		   and history_seq = #{historySeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+		   <if test="itemSeq != null and itemSeq != ''">
+		   and item_seq = #{itemSeq}
+		   </if>
+	</delete>
+	
+	<!-- delete history master -->
+	<delete id="deleteHistory" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.deleteHistory */
+		delete
+		  from ZM_SALES_HISTORY_MNG
+		 where 1 = 1
+		   and history_seq = #{historySeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+	</delete>
+	
+	<!-- result Master update -->
+	<update id="updateMasterResult" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateMasterResult */
+		update ZM_SALES_HISTORY_MNG
+		   set mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+			 <if test="requestYn != null and requestYn != ''">
+			 , request_yn = #{requestYn}
+			 </if>
+			 <if test="resultSeqN != null and resultSeqN != ''">
+			 , result_seq = #{resultSeqN}
+			 </if>
+			 <if test="fileOwner != null and fileOwner != ''">
+			 , file_owner = #{fileOwner}
+			 </if>
+			 <if test="description != null and description != ''">
+			 , description = #{description}
+			 </if>
+			 <if test="rejectDesc != null and rejectDesc != ''">
+			 , reject_desc = #{rejectDesc}
+			 </if>
+		 where 1 = 1
+		   and history_seq = #{historySeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+		   <if test="resultSeq != null and resultSeq != ''">
+		   and result_seq = #{resultSeq}
+		   </if>
+		   <if test="resultSeqO != null and resultSeqO != ''">
+		   and result_seq = #{resultSeqO}
+		   </if>
+	</update>
+	
+	
+	<!-- result L Detail update -->
+	<update id="updateDetailResultL" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateDetailResultL */
+		UPDATE ZM_SALES_RESULT_L_DETAIL
+		SET 
+			mod_dttm=NOW()
+			, mod_user = #{modUserSeq} 
+			<if test='qty != null and qty != ""'>
+			, qty = #{qty}
+			, amt = #{amt}
+			</if>
+			<if test='qtyOn != null and qtyOn != ""'>
+			, amt_on = #{amtOn}
+			, qty_on = #{qtyOn}
+			</if>
+			<if test='hisYn != null and hisYn != ""'>
+			, his_yn = #{hisYn}
+			</if>
+			<if test='hisOnYn != null and hisOnYn != ""'>
+			, hison_yn = #{hisOnYn}
+			</if>
+			<if test='qty2 != null and qty2 != ""'>
+			, amt2 = #{amt2}
+			, qty2 = #{qty2}
+			</if>
+			<if test='qty2On != null and qty2On != ""'>
+			, amt2_on = #{amt2On}
+			, qty2_on = #{qty2On}
+			</if>
+			<if test='his2Yn != null and his2Yn != ""'>
+			, his2_yn = #{his2Yn}
+			</if>
+			<if test='his2OnYn != null and his2OnYn != ""'>
+			, his2on_yn = #{his2OnYn}
+			</if>
+			<if test='qty3 != null and qty3 != ""'>
+			, amt3 = #{amt3}
+			, qty3 = #{qty3}
+			</if>
+			<if test='qty3On != null and qty3On != ""'>
+			, amt3_on = #{amt3On}
+			, qty3_on = #{qty3On}
+			</if>
+			<if test='his3Yn != null and his3Yn != ""'>
+			, his3_yn = #{his3Yn}
+			</if>
+			<if test='his3OnYn != null and his3OnYn != ""'>
+			, his3on_yn = #{his3OnYn}
+			</if>
+			<if test='qty4 != null and qty4 != ""'>
+			, amt4 = #{amt4}
+			, qty4 = #{qty4}
+			</if>
+			<if test='qty4On != null and qty4On != ""'>
+			, amt4_on = #{amt4On}
+			, qty4_on = #{qty4On}
+			</if>
+			<if test='his4Yn != null and his4Yn != ""'>
+			, his4_yn = #{his4Yn}
+			</if>
+			<if test='his4OnYn != null and his4OnYn != ""'>
+			, his4on_yn = #{his4OnYn}
+			</if>
+			<if test='qty5 != null and qty5 != ""'>
+			, amt5 = #{amt5}
+			, qty5 = #{qty5}
+			</if>
+			<if test='qty5On != null and qty5On != ""'>
+			, amt5_on = #{amt5On}
+			, qty5_on = #{qty5On}
+			</if>
+			<if test='his5Yn != null and his5Yn != ""'>
+			, his5_yn = #{his5Yn}
+			</if>
+			<if test='his5OnYn != null and his5OnYn != ""'>
+			, his5on_yn = #{his5OnYn}
+			</if>
+		WHERE 1=1
+		and result_seq = #{resultSeq} 
+		and item_seq = #{itemSeq} 
+	</update>
+	
+	<!-- history result update -->
+	<update id="updateHistoryResult" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateHistoryResult */
+		UPDATE ZM_SALES_HISTORY_MNG
+		SET 
+			request_yn = #{requestYn}
+			<if test='rejectDesc != null and rejectDesc != ""'>
+			, reject_desc = #{rejectDesc}
+			</if>
+			,mod_dttm = NOW()
+			, mod_user = #{modUserSeq}
+		WHERE history_seq = #{historySeq}
+	</update>
+	
+	<!-- history Detail update -->
+	<update id="updateHistoryResultDetailNew" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateHistoryResultDetailNew */
+		UPDATE ZM_SALES_HISTORY_DETAIL
+		SET 
+			mod_dttm = NOW()
+			, mod_user = #{regUserSeq}
+			<if test='unitSeq1 != null and unitSeq1 != ""'>
+			, unit_seq1 = #{unitSeq1}
+			<if test='resultAmt != null and resultAmt != ""'>
+			, result_amt = #{resultAmt}
+			, result_qty = #{resultQty}
+			, change_amt = #{changeAmt}
+			, change_qty = #{changeQty}
+			</if>
+			<if test='resultAmtOn != null and resultAmtOn != ""'>
+			, result_amt_on = #{resultAmtOn}
+			, result_qty_on = #{resultQtyOn}
+			, change_amt_on = #{changeAmtOn}
+			, change_qty_on = #{changeQtyOn}
+			</if>
+			</if>
+			<if test='unitSeq2 != null and unitSeq2 != ""'>
+			, unit_seq2 = #{unitSeq2}
+			<if test='result2Amt != null and result2Amt != ""'>
+			, result2_amt = #{result2Amt}
+			, result2_qty = #{result2Qty}
+			, change2_amt = #{change2Amt}
+			, change2_qty = #{change2Qty}
+			</if>
+			<if test='result2AmtOn != null and result2AmtOn != ""'>
+			, result2_amt_on = #{result2AmtOn}
+			, result2_qty_on = #{result2QtyOn}
+			, change2_amt_on = #{change2AmtOn}
+			, change2_qty_on = #{change2QtyOn}
+			</if>
+			</if>
+			<if test='unitSeq3 != null and unitSeq3 != ""'>
+			, unit_seq3 = #{unitSeq3}
+			<if test='result3Amt != null and result3Amt != ""'>
+			, result3_amt = #{result3Amt}
+			, result3_qty = #{result3Qty}
+			, change3_amt = #{change3Amt}
+			, change3_qty = #{change3Qty}
+			</if>
+			<if test='result3AmtOn != null and result3AmtOn != ""'>
+			, result3_amt_on = #{result3AmtOn}
+			, result3_qty_on = #{result3QtyOn}
+			, change3_amt_on = #{change3AmtOn}
+			, change3_qty_on = #{change3QtyOn}
+			</if>
+			</if>
+			<if test='unitSeq4 != null and unitSeq4 != ""'>
+			, unit_seq4 = #{unitSeq4}
+			<if test='result4Amt != null and result4Amt != ""'>
+			, result4_amt = #{result4Amt}
+			, result4_qty = #{result4Qty}
+			, change4_amt = #{change4Amt}
+			, change4_qty = #{change4Qty}
+			</if>
+			<if test='result4AmtOn != null and result4AmtOn != ""'>
+			, result4_amt_on = #{result4AmtOn}
+			, result4_qty_on = #{result4QtyOn}
+			, change4_amt_on = #{change4AmtOn}
+			, change4_qty_on = #{change4QtyOn}
+			</if>
+			</if>
+			<if test='unitSeq5 != null and unitSeq5 != ""'>
+			, unit_seq5 = #{unitSeq5}
+			<if test='result5Amt != null and result5Amt != ""'>
+			, result5_amt = #{result5Amt}
+			, result5_qty = #{result5Qty}
+			, change5_amt = #{change5Amt}
+			, change5_qty = #{change5Qty}
+			</if>
+			<if test='result5AmtOn != null and result5AmtOn != ""'>
+			, result5_amt_on = #{result5AmtOn}
+			, result5_qty_on = #{result5QtyOn}
+			, change5_amt_on = #{change5AmtOn}
+			, change5_qty_on = #{change5QtyOn}
+			</if>
+			</if>
+		WHERE detail_history_seq = #{detailHistorySeq}
+	</update>
+	
+	<!-- result Detail Update -->
+	<update id="updateResultMng" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateResultMng */
+		update ZM_SALES_RESULT_MNG
+		   set mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+			 <if test="requestYn != null and requestYn != ''">
+			 , request_yn = #{requestYn}
+			 </if>
+		 where 1 = 1
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+		   <if test="resultSeq != null and resultSeq != ''">
+		   and result_seq = #{resultSeq}
+		   </if>
+	</update>	
+	
+	<!-- result Detail hisYn Update -->
+	<update id="updateResultDetailHisYn" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateResultDetailHisYn */
+		UPDATE ZM_SALES_RESULT_L_DETAIL
+		SET 
+		  mod_dttm = NOW()
+		  , mod_user = #{regUserSeq}
+		 <if test="hisYn != null and hisYn != ''">
+		 , his_yn = #{hisYn}
+		 </if>
+		 <if test="hisOnYn != null and hisOnYn != ''">
+		 , hison_yn = #{hisOnYn}
+		 </if>
+		 <if test="his2Yn != null and his2Yn != ''">
+		 , his2_yn = #{his2Yn}
+		 </if>
+		 <if test="his2OnYn != null and his2OnYn != ''">
+		 , his2on_yn = #{his2OnYn}
+		 </if>
+		 <if test="his3Yn != null and his3Yn != ''">
+		 , his3_yn = #{his3Yn}
+		 </if>
+		 <if test="his3OnYn != null and his3OnYn != ''">
+		 , his3on_yn = #{his3OnYn}
+		 </if>
+		 <if test="his4Yn != null and his4Yn != ''">
+		 , his4_yn = #{his4Yn}
+		 </if>
+		 <if test="his4OnYn != null and his4OnYn != ''">
+		 , his4on_yn = #{his4OnYn}
+		 </if>
+		 <if test="his5Yn != null and his5Yn != ''">
+		 , his5_yn = #{his5Yn}
+		 </if>
+		 <if test="his5OnYn != null and his5OnYn != ''">
+		 , his5on_yn = #{his5OnYn}
+		 </if>
+		WHERE result_detail_seq = #{resultDetailSeq}
+	</update>	
+	
+	<!-- result Detail Update -->
+	<update id="updateResultDetail" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.updateResultDetail */
+		update ZM_SALES_RESULT_DETAIL
+		   set mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+			 <if test="amt != null and amt != ''">
+			 , amt = replace(#{amt}, ',', '')
+			 </if>
+			 <if test="qty != null and qty != ''">
+		   	 , qty = replace(#{qty}, ',', '')
+		   	 </if>
+		 where 1 = 1
+		   <if test="resultDetailSeq != null and resultDetailSeq != ''">
+		   and result_detail_seq = #{resultDetailSeq}
+		   </if>
+		   <if test="resultSeq != null and resultSeq != ''">
+		   and result_seq = #{resultSeq}
+		   </if>
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+	</update>
+	
+	<!-- 수정요청 내역 -->
+	<select id="selectResultAmendList" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+	/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectResultAmendList */
+	SELECT 
+	*
+	FROM 
+	(	
+		SELECT 
+		(SELECT c.result_dt FROM ZM_SALES_RESULT_MNG c WHERE a.result_seq = c.result_seq) as resultDt
+		, a.history_seq as historySeq
+		, a.result_seq as resultSeq
+		, a.request_yn as requestYn
+		, a.store_seq as storeSeq
+		, (SELECT d.store_nm FROM ZM_SALES_STORE d WHERE a.store_seq = d.store_seq) as storeNm
+		FROM ZM_SALES_HISTORY_MNG a
+		WHERE 1=1
+		and zemos_idx = #{zemosIdx}
+		and wrkplc_idx  = #{wrkplcIdx}
+		<if test="storeSeq != null and storeSeq != ''">
+		and store_seq = #{storeSeq}
+		</if>
+	) e
+	WHERE 1=1
+	<choose>
+	<when test="startDate != null and startDate != ''">
+		and e.resultDt >= #{startDate}	
+		and e.resultDt &lt;= #{endDate}
+	</when>
+	<otherwise>
+		and e.resultDt = NOW()
+	</otherwise>
+	</choose>
+	<if test="requestYn != null and requestYn != ''">
+		and e.requestYn = #{requestYn}		
+	</if>
+	
+	</select>
+	<!-- 판매관리현황 -->
+	<select id="selectSalesPresent" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectSalesPresent */
+		select @ROWNUM := @ROWNUM + 1 AS rn
+		     , a.storeNm
+		     , a.itemNm
+		     , a.resultDt
+		     , case when a.dollarAmt is null or a.dollarAmt = '' then FORMAT(0, 2) else cast(a.dollarAmt as DECIMAL(20,2)) end dollarAmt
+		     , a.amt
+		     , a.qty
+		     , case when a.dollarAmt is null or a.dollarAmt = '' then FORMAT(0, 2) else cast(a.dollarAmt as DECIMAL(20,2)) end excelDollarAmt
+		     , a.excelAmt
+		     , a.excelQty
+		     , a.resultSeq
+		     , a.zemosIdx
+		     , a.storeSeq
+		     , a.fileOwner
+		     , a.idx
+		     , a.requestYn
+		     , a.result_change_seq
+			 , a.cRequestYn
+		  from (
+				select a.storeNm
+				     , a.itemNm
+				     , a.resultDt
+				     , ifnull(a.dollarAmt, 0) as dollarAmt
+				     , ifnull(format(sum(a.amt), '##0.######'), 0) as amt
+				     , ifnull(format(sum(a.qty), '##0.######'), 0) as qty
+				     , ifnull(a.dollarAmt, 0) as excelDollarAmt
+				     , ifnull(sum(a.amt), 0) as excelAmt
+				     , ifnull(sum(a.qty), 0) as excelQty
+				     , a.resultSeq
+				     , a.zemosIdx
+				     , a.storeSeq
+				     , a.fileOwner
+				     , a.idx
+				     , a.requestYn
+				     , a.result_change_seq
+				     , a.cRequestYn
+				  FROM (
+				        select a.storeNm
+				             , a.itemNm
+				             , a.resultDt
+				             , a.dollarAmt
+				             , a.amt
+				             , a.qty
+				             , a.resultSeq
+				             , a.requestYn
+				             , a.zemosIdx
+				             , a.wrkplcIdx
+				             , a.storeSeq
+				             , a.fileOwner
+				             , a.idx
+				             , a.result_change_seq
+				             , a.cRequestYn
+				          from (
+				                select (select store_nm from ZM_SALES_STORE where a.zemos_idx = zemos_idx and a.store_seq = store_seq) as storeNm
+				                     , (select item_nm from ZM_SALES_ITEM where a.zemos_idx = zemos_idx and b.item_seq = item_seq) as itemNm
+				                     , b.item_seq AS itemSeq
+				                     , date_format(a.result_dt, '%Y-%m-%d') as resultDt
+				                     , a.dollar_amt as dollarAmt
+				                     , b.result_seq as resultSeq
+				                     , a.zemos_idx AS zemosIdx
+				                     , a.wrkplc_idx as wrkplcIdx
+				                     , a.store_seq AS storeSeq
+				                     , a.file_owner AS fileOwner
+				                     , a.request_yn AS requestYn
+				                     , (select idx from ZM_ATCHMNFL where a.file_owner = file_owner LIMIT 1) as idx
+				                     /*
+				                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_amt
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+                        			        when c.request_yn = 'N' then d.result_amt
+                        			        else 0 
+                        		       end AS amt
+                        		     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.qty
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_qty
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+                        			        when c.request_yn = 'N' then d.result_qty
+                        			        else 0 
+                        		       end AS qty
+				                     */
+				                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+								            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+									        else b.amt 
+								       end AS amt
+								     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.qty
+								            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.result_qty
+									        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+									        else b.qty 
+								       end AS qty
+				                     , c.result_change_seq
+				                     , c.request_yn as cRequestYn
+				                  from ZM_SALES_RESULT_MNG a  
+				                      inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq 
+				                      <!-- <if test='pagegbn != null and pagegbn != ""'>
+				                      and a.request_yn in ('W', 'Y', 'D')
+				                      </if> -->
+				                      left join ZM_SALES_HISTORY_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and a.result_seq = c.result_seq
+				                      and c.result_change_seq = (select max(result_change_seq) 
+					                                              from ZM_SALES_HISTORY_MNG 
+					                                             where zemos_idx = #{zemosIdx}
+					                                               and wrkplc_idx = #{wrkplcIdx}
+					                                               and store_seq = a.store_seq
+					                                               and result_seq = a.result_seq
+					                                               /* and request_yn = 'W' */)
+				                      left join ZM_SALES_HISTORY_DETAIL d on c.history_seq = d.history_seq and a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and b.item_seq = d.item_seq
+				                      where 1=1
+		                              and a.zemos_idx = #{zemosIdx} 
+		                              <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+									   and a.wrkplc_idx = #{wrkplcIdx}
+									  </if>  
+				               ) a
+				       ) a
+				 where 1 = 1
+				   and a.zemosIdx = #{zemosIdx} 
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplcIdx = #{wrkplcIdx}
+				   </if>
+				   <if test='salesabun != null and salesabun != ""'>
+				   and a.storeSeq in (select store_seq from ZM_SALES_STORE where 1=1 and (sabun = #{salesabun} or sabun2 = #{salesabun}) and use_yn = 'Y')
+				   </if>		   
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.storeSeq = #{storeSeq}
+				   </if>
+				   <if test='selectText != null and selectText != ""'>
+				   and a.storeNm like concat(concat('%', #{selectText}), '%')
+				   </if>
+				   <!-- <if test='pagegbn != W and pagegbn != "W"'> -->
+				   <if test='pagegbn == null or pagegbn == ""'>
+				   	<if test='startDate != null and startDate != "" and endDate != null and endDate != ""'>
+				   and date_format(a.resultDt, '%Y%m%d') between date_format(replace(#{startDate}, '-', ''), '%Y%m%d') and date_format(replace(#{endDate}, '-', ''), '%Y%m%d')
+				   	</if>
+				   </if>
+				   and case when a.requestYn = 'W' then a.cRequestYn is not null 
+				            when (a.requestYn = 'Y' and a.cRequestYn = 'W') then a.cRequestYn is not null
+		  					when (a.requestYn = 'Y' and a.cRequestYn = 'Y') or (a.requestYn = 'Y' and a.cRequestYn = 'N') then 1 = 0
+				            else 1 = 1 end
+				   <!-- and a.amt <![CDATA[<>]]> 0 -->
+				   <!-- and a.cRequestYn is not null -->
+				   <!--
+				   and a.result_change_seq = (select max(result_change_seq) 
+                                              from ZM_SALES_HISTORY_MNG 
+                                             where zemos_idx = #{zemosIdx}
+                                               and wrkplc_idx = #{wrkplcIdx}
+                                               and store_seq = a.storeSeq
+                                               and result_seq = a.resultSeq
+                                               and request_yn = 'W')
+				   -->
+				 group by a.storeNm, a.resultDt, a.dollarAmt, a.resultSeq, a.zemosIdx, a.wrkplcIdx, a.storeSeq, a.fileOwner, a.idx
+				 order by a.resultDt desc,a.storeNm
+		       ) a
+		       , (SELECT @ROWNUM := 0 ) B
+		 <if test='start != null and start != "" and limit != null and limit != ""'>
+		 LIMIT ${start}, ${limit}
+		 </if>
+	</select>
+	
+	<!-- 판매관리현황 count -->
+	<select id="selectSalesPresentCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectSalesPresentCnt */
+		select count(*) as cnt
+		  from (
+				select concat(@rownum:=@rownum+1) as rn
+				     , a.storeNm
+				     , a.itemNm
+				     , a.resultDt
+				     , ifnull(a.dollarAmt, 0) as dollarAmt
+				     , ifnull(sum(a.amt), 0) as amt
+				     , ifnull(sum(a.qty), 0) as qty
+				     , a.resultSeq
+				     , a.zemosIdx
+				     , a.storeSeq
+				     , a.fileOwner
+				     , a.idx
+				     , a.result_change_seq
+			 		 , a.cRequestYn
+				  FROM (
+				        select a.storeNm
+				             , a.itemNm
+				             , a.resultDt
+				             , a.dollarAmt
+				             , a.amt
+				             , a.qty
+				             , a.resultSeq
+				             , a.requestYn
+				             , a.zemosIdx
+				             , a.wrkplcIdx
+				             , a.storeSeq
+				             , a.fileOwner
+				             , a.idx
+				             , a.result_change_seq
+			 				 , a.cRequestYn
+				          from (
+				                select (select store_nm from ZM_SALES_STORE where a.zemos_idx = zemos_idx and a.store_seq = store_seq) as storeNm
+				                     , (select item_nm from ZM_SALES_ITEM where a.zemos_idx = zemos_idx and b.item_seq = item_seq) as itemNm
+				                     , b.item_seq AS itemSeq
+				                     , date_format(a.result_dt, '%Y-%m-%d') as resultDt
+				                     , a.dollar_amt as dollarAmt
+				                     , b.result_seq as resultSeq
+				                     , a.zemos_idx AS zemosIdx
+				                     , a.wrkplc_idx as wrkplcIdx
+				                     , a.store_seq AS storeSeq
+				                     , a.file_owner AS fileOwner
+				                     , a.request_yn AS requestYn
+				                     , (select idx from ZM_ATCHMNFL where a.file_owner = file_owner LIMIT 1) as idx
+		                             /*
+		                             , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_amt
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+                        			        when c.request_yn = 'N' then d.result_amt
+                        			        else 0 
+                        		       end AS amt
+                        		     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.qty
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_qty
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+                        			        when c.request_yn = 'N' then d.result_qty
+                        			        else 0 
+                        		       end AS qty
+		                             */
+		                             , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+								            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+									        else b.amt 
+								       end AS amt
+								     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.qty
+								            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.result_qty
+									        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+									        else b.qty 
+								       end AS qty
+		                             , c.result_change_seq
+				                     , c.request_yn as cRequestYn
+				                  from ZM_SALES_RESULT_MNG a  
+		                              inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq  
+		                               <!-- <if test='pagegbn != null and pagegbn != ""'>
+		                               and a.request_yn in ('W','Y', 'D')
+		                               </if> -->
+		                              left join ZM_SALES_HISTORY_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and a.result_seq = c.result_seq
+		                              and c.result_change_seq = (select max(result_change_seq) 
+					                                              from ZM_SALES_HISTORY_MNG 
+					                                             where zemos_idx = #{zemosIdx}
+					                                               and wrkplc_idx = #{wrkplcIdx}
+					                                               and store_seq = a.store_seq
+					                                               and result_seq = a.result_seq
+					                                               /* and request_yn = 'W' */)
+		                              left join ZM_SALES_HISTORY_DETAIL d on c.history_seq = d.history_seq and a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and b.item_seq = d.item_seq
+		                              where 1=1
+		                              and a.zemos_idx = #{zemosIdx} 
+		                              <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+									   and a.wrkplc_idx = #{wrkplcIdx}
+									  </if> 
+				               ) a
+				       ) a
+				     , (select @rownum := 0 ) b
+				 where 1 = 1
+				   and a.zemosIdx = #{zemosIdx}
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplcIdx = #{wrkplcIdx}
+				   </if>
+				   <if test='salesabun != null and salesabun != ""'>
+				   and a.storeSeq in (select store_seq from ZM_SALES_STORE where 1=1 and (sabun = #{salesabun} or sabun2 = #{salesabun}) and use_yn = 'Y')
+				   </if>		   
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.storeSeq = #{storeSeq}
+				   </if>
+				   <if test='selectText != null and selectText != ""'>
+				   and a.storeNm like concat(concat('%', #{selectText}), '%')
+				   </if>
+				   <!-- <if test='pagegbn != W and pagegbn != "W"'> -->
+				   <if test='pagegbn == null or pagegbn == ""'>
+				   <if test='startDate != null and startDate != "" and endDate != null and endDate != ""'>
+				   and date_format(a.resultDt, '%Y%m%d') between date_format(replace(#{startDate}, '-', ''), '%Y%m%d') and date_format(replace(#{endDate}, '-', ''), '%Y%m%d')
+				   </if>
+				   </if>
+				   and case when a.requestYn = 'W' then a.cRequestYn is not null 
+				            when (a.requestYn = 'Y' and a.cRequestYn = 'W') then a.cRequestYn is not null
+		  					when (a.requestYn = 'Y' and a.cRequestYn = 'Y') or (a.requestYn = 'Y' and a.cRequestYn = 'N') then 1 = 0
+				            else 1 = 1 end
+				   <!-- and a.amt <![CDATA[<>]]> 0 -->
+				   <!-- and a.cRequestYn is not null -->
+				   <!--
+				   and a.result_change_seq = (select max(result_change_seq) 
+                                              from ZM_SALES_HISTORY_MNG 
+                                             where zemos_idx = #{zemosIdx}
+                                               and wrkplc_idx = #{wrkplcIdx}
+                                               and store_seq = a.storeSeq
+                                               and result_seq = a.resultSeq
+                                               and request_yn = 'W')
+                   -->
+				 group by a.storeNm, a.resultDt, a.dollarAmt, a.resultSeq, a.zemosIdx, a.wrkplcIdx, a.storeSeq, a.fileOwner, a.idx
+				 order by a.resultDt desc,a.storeNm
+		  	   ) a
+	</select>
+	
+	<!-- 판매관리현황 total -->
+	<select id="selectSalesPresentTotal" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.selectSalesPresentTotal */
+		select sum(a.amt) AS amt
+		     , sum(a.qty) AS qty
+		     , FORMAT(sum(a.dollarAmt), 2) as dollarAmt
+		  from (
+				select concat(@rownum:=@rownum+1) as rn
+				     , a.storeNm
+				     , a.itemNm
+				     , a.resultDt
+				     , ifnull(a.dollarAmt, 0) as dollarAmt
+				     , ifnull(sum(a.amt), 0) as amt
+				     , ifnull(sum(a.qty), 0) as qty
+				     , a.resultSeq
+				     , a.zemosIdx
+				     , a.storeSeq
+				     , a.fileOwner
+				     , a.idx
+				     , a.result_change_seq
+			 		 , a.cRequestYn
+				  FROM (
+				        select a.storeNm
+				             , a.itemNm
+				             , a.resultDt
+				             , a.dollarAmt
+				             , a.amt
+				             , a.qty
+				             , a.resultSeq
+				             , a.requestYn
+				             , a.zemosIdx
+				             , a.wrkplcIdx
+				             , a.storeSeq
+				             , a.fileOwner
+				             , a.idx
+				             , a.result_change_seq
+			 				 , a.cRequestYn
+				          from (
+				                select (select store_nm from ZM_SALES_STORE where a.zemos_idx = zemos_idx and a.store_seq = store_seq) as storeNm
+				                     , (select item_nm from ZM_SALES_ITEM where a.zemos_idx = zemos_idx and b.item_seq = item_seq) as itemNm
+				                     , b.item_seq AS itemSeq
+				                     , date_format(a.result_dt, '%Y-%m-%d') as resultDt
+				                     , a.dollar_amt as dollarAmt
+				                     , b.result_seq as resultSeq
+				                     , a.zemos_idx AS zemosIdx
+				                     , a.wrkplc_idx as wrkplcIdx
+				                     , a.store_seq AS storeSeq
+				                     , a.file_owner AS fileOwner
+				                     , a.request_yn AS requestYn
+				                     , (select idx from ZM_ATCHMNFL where a.file_owner = file_owner LIMIT 1) as idx
+		                             /*
+		                             , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_amt
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+                        			        when c.request_yn = 'N' then d.result_amt
+                        			        else 0 
+                        		       end AS amt
+                        		     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.qty
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.change_qty
+                        			        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+                        			        when c.request_yn = 'N' then d.result_qty
+                        			        else 0 
+                        		       end AS qty
+                        		     */
+                        		     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+								            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+									        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+									        else b.amt 
+								       end AS amt
+								     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.qty
+								            when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_qty
+									        when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.qty
+								            when (a.request_yn = 'Y' and c.request_yn = 'Y') then d.result_qty
+									        when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_qty
+									        else b.qty 
+								       end AS qty
+		                             , c.result_change_seq
+				                     , c.request_yn as cRequestYn
+				                  from ZM_SALES_RESULT_MNG a  
+		                              inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq  
+		                              <!-- <if test='pagegbn != null and pagegbn != ""'>
+		                              and a.request_yn in ('W','Y', 'D')
+		                              </if> -->
+		                              left join ZM_SALES_HISTORY_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and a.result_seq = c.result_seq
+		                              and c.result_change_seq = (select max(result_change_seq) 
+					                                              from ZM_SALES_HISTORY_MNG 
+					                                             where zemos_idx = #{zemosIdx}
+					                                               and wrkplc_idx = #{wrkplcIdx}
+					                                               and store_seq = a.store_seq
+					                                               and result_seq = a.result_seq
+					                                               /* and request_yn = 'W' */)
+		                              left join ZM_SALES_HISTORY_DETAIL d on c.history_seq = d.history_seq and a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and b.item_seq = d.item_seq
+		                              where 1=1
+		                              and a.zemos_idx = #{zemosIdx} 
+		                              <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+									   and a.wrkplc_idx = #{wrkplcIdx}
+									  </if>   
+				               ) a
+				       ) a
+				     , (select @rownum := 0 ) b
+				 where 1 = 1
+				   and a.zemosIdx = #{zemosIdx}
+				   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				   and a.wrkplcIdx = #{wrkplcIdx}
+				   </if>
+				   <if test='salesabun != null and salesabun != ""'>
+				   and a.storeSeq in (select store_seq from ZM_SALES_STORE where 1=1 and (sabun = #{salesabun} or sabun2 = #{salesabun}) and use_yn = 'Y')
+				   </if>		   
+				   <if test='storeSeq != null and storeSeq != ""'>
+				   and a.storeSeq = #{storeSeq}
+				   </if>
+				   <if test='selectText != null and selectText != ""'>
+				   and a.storeNm like concat(concat('%', #{selectText}), '%')
+				   </if>
+				   <!-- <if test='pagegbn != W and pagegbn != "W"'> -->
+				   <if test='pagegbn == null or pagegbn == ""'>
+				   <if test='startDate != null and startDate != "" and endDate != null and endDate != ""'>
+				   and date_format(a.resultDt, '%Y%m%d') between date_format(replace(#{startDate}, '-', ''), '%Y%m%d') and date_format(replace(#{endDate}, '-', ''), '%Y%m%d')
+				   </if>
+				   </if>
+				   and case when a.requestYn = 'W' then a.cRequestYn is not null 
+				            when (a.requestYn = 'Y' and a.cRequestYn = 'W') then a.cRequestYn is not null
+		  					when (a.requestYn = 'Y' and a.cRequestYn = 'Y') or (a.requestYn = 'Y' and a.cRequestYn = 'N') then 1 = 0
+				            else 1 = 1 end
+				   and a.amt <![CDATA[<>]]> 0
+				   <!-- and a.cRequestYn is not null -->
+				   <!--
+				   and a.result_change_seq = (select max(result_change_seq) 
+                                              from ZM_SALES_HISTORY_MNG 
+                                             where zemos_idx = #{zemosIdx}
+                                               and wrkplc_idx = #{wrkplcIdx}
+                                               and store_seq = a.storeSeq
+                                               and result_seq = a.resultSeq
+                                               and request_yn = 'W')
+				   -->
+				 group by a.storeNm, a.resultDt, a.dollarAmt, a.resultSeq, a.zemosIdx, a.wrkplcIdx, a.storeSeq, a.fileOwner, a.idx
+				 order by a.resultDt desc,a.storeNm
+		  	   ) a
+	</select>
+	
+	<!-- 사용자 실적등록 Master Delete -->
+	<delete id="deleteResultMng" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.deleteResultMng */
+		delete
+		  from ZM_SALES_RESULT_MNG
+		 where 1 = 1
+		   and result_seq = #{resultSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+	</delete> 
+	
+	<!-- 사용자 실적등록 Detail Delete -->
+	<delete id="deleteResultDetail" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2MyResultRequest.deleteResultDetail */
+		delete
+		  from ZM_SALES_RESULT_DETAIL
+		 where 1 = 1
+		   and result_seq = #{resultSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+		   and store_seq = #{storeSeq}
+	</delete>
+	
+</mapper>

@@ -1,0 +1,202 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2Unit">
+	
+	<!-- 분류1 count -->
+	<select id="selectSales2UnitCnt" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Unit.selectSales2UnitCnt */
+		select count(*) AS cnt
+		  from ZM_SALES_UNIT
+		 where 1 = 1
+		   <!--
+		   <if test='unitSeq != null and unitSeq != ""'>
+		   and unit_seq = #{unitSeq}
+		   </if>
+		   -->
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='unitNm != null and unitNm != ""'>
+		   and unit_nm like CONCAT(CONCAT('%', #{unitNm}), '%')
+		   </if>
+		   <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if>
+		   
+	</select>
+	
+	<select id="selectSales2UnitCntForInsert" parameterType="java.util.HashMap" resultType="java.lang.Integer">
+		/* zenielm.zemos3.family.sales2.sales2Unit.selectSales2UnitCntForInsert */
+		select count(*) AS cnt
+		  from ZM_SALES_UNIT
+		 where 1 = 1
+		   <!--
+		   <if test='unitSeq != null and unitSeq != ""'>
+		   and unit_seq = #{unitSeq}
+		   </if>
+		   -->
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='unitNm != null and unitNm != ""'>
+		   and unit_nm = #{unitNm}
+		   </if>
+		   <if test='useYn != null and useYn != ""'>
+		   and use_yn = #{useYn}
+		   </if>
+		   
+	</select>
+	
+	<!-- 분류1 list -->
+	<select id="selectSales2Unit" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Unit.selectSales2Unit */
+		select unit_seq as unitSeq
+		     , zemos_idx  as zemosIdx
+		     , unit_nm  as unitNm
+		     , use_yn     as useYn
+		     , reg_dttm   as regDttm
+		     , reg_user   as regUser
+		     , mod_dttm   as modDttm
+		     , mod_user   as modUser
+		  from ZM_SALES_UNIT
+		 where 1 = 1
+		   <if test='unitSeq != null and unitSeq != ""'>
+		   and unit_seq = #{unitSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='unitNm != null and unitNm != ""'>
+		   and unit_nm like CONCAT(CONCAT('%', #{unitNm}), '%')
+		   </if>
+		   <if test='selectUseYn != null and selectUseYn != ""'>
+		   and use_yn = #{selectUseYn}
+		   </if>
+		 order by use_yn desc, unit_nm asc
+	</select>
+	
+	<!-- 분류1타 화면 조회 list -->
+	<select id="selectSales2Unit01" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Unit.selectSales2Unit01 */
+		select unit_seq as unitSeq
+		     , zemos_idx  as zemosIdx
+		     , unit_nm  as unitNm
+		     , use_yn     as useYn
+		     , reg_dttm   as regDttm
+		     , reg_user   as regUser
+		     , mod_dttm   as modDttm
+		     , mod_user   as modUser
+		  from ZM_SALES_UNIT
+		 where 1 = 1
+		   <if test='unitSeq != null and unitSeq != ""'>
+		   and unit_seq = #{unitSeq}
+		   </if>
+		   <if test='zemosIdx != null and zemosIdx != ""'>
+		   and zemos_idx = #{zemosIdx}
+		   </if>
+		   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		   and wrkplc_idx = #{wrkplcIdx}
+		   </if>
+		   <if test='unitNm != null and unitNm != ""'>
+		   and unit_nm like CONCAT(CONCAT('%', #{unitNm}), '%')
+		   </if>
+		   and use_yn = 'Y'
+		 order by use_yn desc, unit_nm asc
+	</select>
+	
+	<!-- 분류1 insert -->
+	<insert id="unitInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="unit_seq">
+		/* zenielm.zemos3.family.sales2.sales2Uint.unitInsert */
+		insert into ZM_SALES_UNIT
+		(
+			unit_seq
+			, zemos_idx
+			, wrkplc_idx
+			, unit_nm
+			, use_yn
+			, reg_dttm
+			, reg_user
+			, mod_dttm
+			, mod_user
+		) values (
+			#{unit_seq}
+			, #{zemosIdx}
+			, #{wrkplcIdx}
+			, #{unitNm}
+			, #{useYn}
+			, NOW()
+			, #{regUserSeq}
+			, NOW()
+			, #{regUserSeq}
+		)
+	</insert>
+	
+	<!-- 분류1 update -->
+	<update id="unitUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Unit.unitUpdate */
+		update ZM_SALES_UNIT
+		   set unit_nm = #{unitNm}
+			 , use_yn = #{useYn}
+			 , mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and unit_seq = #{unitSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+	
+	<insert id="ItemunitInsert" parameterType="java.util.HashMap" useGeneratedKeys="true" keyProperty="item_seq">
+		/* zenielm.zemos3.family.sales2.sales2Unit.ItemunitInsert */		
+		insert into ZM_SALES_ITEM_DETAIL
+			(	 
+				  item_seq
+				, zemos_idx
+				, wrkplc_idx
+				, unit_seq
+				, use_yn
+				, reg_dttm
+				, reg_user
+				, mod_dttm
+				, mod_user
+			)
+			SELECT A.item_seq
+					,A.zemos_idx
+					,A.wrkplc_idx
+					,B.unit_seq
+					,B.use_yn
+					, NOW()
+					, #{regUserSeq}
+					, NOW()
+					, #{regUserSeq}
+			FROM ZM_SALES_ITEM A
+			inner JOIN ZM_SALES_UNIT B
+			ON A.zemos_idx = B.zemos_idx and A.wrkplc_idx = B.wrkplc_idx
+			WHERE 1=1
+			AND B.unit_seq NOT IN (SELECT distinct C.unit_seq FROM ZM_SALES_ITEM_DETAIL C WHERE 1=1 
+				AND C.zemos_idx =#{zemosIdx} AND C.wrkplc_idx =#{wrkplcIdx})
+				AND A.zemos_idx = #{zemosIdx}
+				AND A.wrkplc_idx = #{wrkplcIdx}
+	</insert>
+	
+	<update id="ItemunitUpdate" parameterType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Unit.ItemunitUpdate */
+		
+		update ZM_SALES_ITEM_DETAIL
+		   set use_yn = #{useYn}
+			 , mod_dttm = NOW()
+			 , mod_user = #{modUserSeq}
+		 where 1 = 1
+		   and unit_seq = #{unitSeq}
+		   and zemos_idx = #{zemosIdx}
+		   and wrkplc_idx = #{wrkplcIdx}
+	</update>
+</mapper>

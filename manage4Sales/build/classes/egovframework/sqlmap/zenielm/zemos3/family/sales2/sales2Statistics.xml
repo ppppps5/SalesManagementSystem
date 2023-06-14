@@ -1,0 +1,403 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="zenielm.zemos3.family.sales2.sales2Statistics">
+
+	<!-- 제모스 판매관리 통계 XML -->
+
+	<!-- 통계 -->
+	<select id="selectStatistics" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Statistics.selectStatistics */
+		SELECT 1
+	</select>
+	
+	<select id="selectReport" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Statistics.selectReport */
+		select a.date as DATE_MONTH
+		     , ifnull(format(b.resultAmt, '##0.######'), 0) as TOT_RESULT
+		     , ifnull(format(b.goalAmt, '##0.######'), 0) as TOT_GOAL
+		     , #{goalYn} as goalYn
+		     , #{taxtYn} as taxtYn
+		     , #{onoffNM} as onoffNM
+		     , #{ItemSeq} as ItemSeq
+		  from (
+		        select a.date
+		          from (
+		                select date_format(last_day(concat(#{endMonth},'-01')) - interval (a.a + (10 * b.a) + (100 * c.a)) MONTH, '%Y%m') as date
+		                  from (select 0 as a union all select 1 union all select 2 union all select 3 union all select 4 union all select 5 union all select 6 union all select 7 union all select 8 union all select 9) as a
+		                       cross join (select 0 as a union all select 1 union all select 2 union all select 3 union all select 4 union all select 5 union all select 6 union all select 7 union all select 8 union all select 9) as b
+		                       cross join (select 0 as a union all select 1 union all select 2 union all select 3 union all select 4 union all select 5 union all select 6 union all select 7 union all select 8 union all select 9) as c
+		               ) a
+		         where 1 = 1
+		         order by a.date  
+		       ) a
+		       left join
+		       (
+		        select a.zemos_idx  
+		             , a.wrkplc_idx  
+		             , a.store_seq  
+		             , a.yyyy
+		             , a.mm
+		             , sum(a.goalAmt) as goalAmt
+		             , sum(a.resultAmt) as resultAmt
+		          from (
+		                select a.zemos_idx  
+		                     , a.wrkplc_idx  
+		                     , a.store_seq  
+		                     , date_format(a.result_dt, '%Y') as yyyy
+		                     , date_format(a.result_dt, '%m') as mm
+		                     , 0 as goalAmt
+		                     <if test='onoffNM == "0"'>
+		                     , ifnull(b.amt,0)+ ifnull(b.amt_on,0)+ifnull(b.amt2,0)+ ifnull(b.amt2_on,0)+ifnull(b.amt3,0)+ ifnull(b.amt3_on,0)+ifnull(b.amt4,0)+ ifnull(b.amt4_on,0)+ifnull(b.amt5,0)+ ifnull(b.amt5_on,0) as resultAmt
+		                     </if>		
+		                     <if test='onoffNM == "1"'>
+		                     , ifnull(b.amt,0)+ifnull(b.amt2,0)+ifnull(b.amt3,0)+ifnull(b.amt4,0)+ifnull(b.amt5,0) as resultAmt
+		                     </if> 
+		                     <if test='onoffNM == "2"'>
+		                     , ifnull(b.amt_on,0)+ ifnull(b.amt2_on,0)+ ifnull(b.amt3_on,0)+ ifnull(b.amt4_on,0)+ ifnull(b.amt5_on,0) as resultAmt
+		                     </if>                    
+		                 from ZM_SALES_RESULT_L_MNG a  
+		                      inner join ZM_SALES_RESULT_L_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq  		                    
+		                 where 1 = 1  
+		                   <if test='zemosIdx != null and zemosIdx != ""'>
+		                   and a.zemos_idx = #{zemosIdx}
+		                   </if>
+		                   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		                   and a.wrkplc_idx = #{wrkplcIdx}
+		                   </if>
+		                   <if test='storeSeq != null and storeSeq != ""'>
+		                   and a.store_seq = #{storeSeq}
+		                   </if>
+		                   and date_format(a.result_dt, '%Y%m') between replace(#{startMonth}, '-', '') and replace(#{endMonth}, '-', '')
+		                  
+		                union all
+		                select a.zemos_idx  
+		                	 , a.wrkplc_idx 
+		                     , a.store_seq  
+		                	 , a.year as yyyy
+		                	 , a.mm as mm
+		                	 <if test='onoffNM == "0"'>
+		                	 , ifnull(a.amt,0)+ifnull(a.amt_on,0)+ifnull(a.amt2,0)+ifnull(a.amt2_on,0)+ifnull(a.amt3,0)+ifnull(a.amt3_on,0)+ifnull(a.amt4,0)+ifnull(a.amt4_on,0)+ifnull(a.amt5,0)+ifnull(a.amt5_on,0) as goalAmt
+		                	 </if>
+		                	 <if test='onoffNM == "1"'>
+		                	 , ifnull(a.amt,0)+ifnull(a.amt2,0)+ifnull(a.amt3,0)+ifnull(a.amt4,0)+ifnull(a.amt5,0) as goalAmt
+		                	 </if>
+		                	 <if test='onoffNM == "2"'>
+		                	 , ifnull(a.amt_on,0)+ifnull(a.amt2_on,0)+ifnull(a.amt3_on,0)+ifnull(a.amt4_on,0)+ifnull(a.amt5_on,0) as goalAmt
+		                	 </if>
+		                	 , 0 as resultAmt
+		                  from ZM_SALES_GOAL a  	
+		                 where 1 = 1
+		                   <if test='zemosIdx != null and zemosIdx != ""'>
+		                   and a.zemos_idx = #{zemosIdx}
+		                   </if>
+		                   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+		                   and a.wrkplc_idx = #{wrkplcIdx}
+		                   </if>
+		                   <if test='storeSeq != null and storeSeq != ""'>
+		                   and a.store_seq = #{storeSeq}
+		                   </if>
+		                   and concat(a.year, a.mm) between replace(#{startMonth}, '-', '') and replace(#{endMonth}, '-', '')
+		                    
+		               ) a
+		               inner join ZM_SALES_STORE b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq		               
+		               		               
+		         where 1 = 1
+		           <if test='taxtYn == "1"'>
+			       and b.tax_yn = 'Y'
+			       </if>
+			       <if test='taxtYn == "2"'>
+			       and b.tax_yn = 'N'
+			       </if>
+		           <if test="class1Seq != null and class1Seq != ''">
+			       and b.class1 = #{class1Seq}
+			       </if>
+			       <if test="class2Seq != null and class2Seq != ''">
+			       and b.class2 = #{class2Seq}
+			       </if>
+			       <if test="class3Seq != null and class3Seq != ''">
+			       and b.class3 = #{class3Seq}
+			       </if>
+			       <if test="class4Seq != null and class4Seq != ''">
+			       and b.class4 = #{class4Seq}
+			       </if>
+			       <if test="class5Seq != null and class5Seq != ''">
+			       and b.class5 = #{class5Seq}
+			       </if>
+		         group by a.yyyy, a.mm
+		       ) b on a.date = concat(b.yyyy, b.mm)
+		 where 1 = 1
+		   and a.date between replace(#{startMonth}, '-', '') and replace(#{endMonth}, '-', '')
+		 order by a.date
+	</select> 
+	
+	<select id="selectReportMonth" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Statistics.selectReportMonth */
+		select a.date as DATE
+			 , ifnull(format(b.resultAmt, '##0.######'), 0) as TOT_RESULT
+		  from (
+		        select a.date
+		          from (
+		               select date_format(last_day(concat(#{yyyyMm},'-01')) - interval (a.a + (10 * b.a) + (100 * c.a)) DAY, '%Y%m%d') as date
+		                 from (select 0 as a union all select 1 union all select 2 union all select 3 union all select 4 union all select 5 union all select 6 union all select 7 union all select 8 union all select 9) as a
+		                      cross join (select 0 as a union all select 1 union all select 2 union all select 3 union all select 4 union all select 5 union all select 6 union all select 7 union all select 8 union all select 9) as b
+		                      cross join (select 0 as a union all select 1 union all select 2 union all select 3 union all select 4 union all select 5 union all select 6 union all select 7 union all select 8 union all select 9) as c
+		               ) a
+		         where 1 = 1
+		           and left(a.date, 6) = replace(#{yyyyMm}, '-', '')
+		         order by a.date
+		       ) a
+		       left join 
+		       (
+		        select a.zemos_idx  
+		             , a.wrkplc_idx  
+		             , a.store_seq  
+		             , a.resultDt
+		             , sum(a.resultAmt) as resultAmt
+		          from (
+		                select a.zemos_idx  
+		                     , a.wrkplc_idx  
+		                     , a.store_seq  
+		                     , b.item_seq
+		                     , date_format(a.result_dt, '%Y%m%d') as resultDt
+		                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+		    		             when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+		    		             when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+		    			         when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+		    			         when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+		    			         when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+		    			         when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+		    			         else 0 end AS resultAmt 
+		                     <!--  
+		                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt  
+		                            when a.request_yn = 'Y' then d.change_amt 
+		                            when a.request_yn = 'N' then b.amt  
+		                            else 0 end AS resultAmt 
+		                     -->       
+		                 from ZM_SALES_RESULT_MNG a  
+		                      inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq  
+		                      left join ZM_SALES_HISTORY_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and a.result_seq = c.result_seq
+		                       and c.result_change_seq =( SELECT MAX(result_change_seq) FROM ZM_SALES_HISTORY_MNG WHERE 1=1 AND result_seq = a.result_seq <!--  AND request_yn ='Y'-->)  
+		                      left join ZM_SALES_HISTORY_DETAIL d on c.history_seq = d.history_seq and a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and b.item_seq = d.item_seq  
+		                 where 1 = 1
+		                   <if test='zemosIdx != null and zemosIdx != ""'>
+						   and a.zemos_idx = #{zemosIdx}
+						   </if>
+				           <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+						   and a.wrkplc_idx = #{wrkplcIdx}
+						   </if>
+						   <if test='storeSeq != null and storeSeq != ""'>
+						   and a.store_seq = #{storeSeq}
+						   </if>
+		                   and date_format(a.result_dt, '%Y%m') = replace(#{yyyyMm}, '-', '')
+		               ) a
+		               inner join ZM_SALES_STORE b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq		               	              
+		         where 1 = 1
+		           <if test="class1Seq != null and class1Seq != ''">
+		           and b.class1 = #{class1Seq}
+		           </if>
+		           <if test="class2Seq != null and class2Seq != ''">
+		           and b.class2 = #{class2Seq}
+		           </if>
+		           <if test="class3Seq != null and class3Seq != ''">
+		           and b.class3 = #{class3Seq}
+		           </if>
+		           
+		         group by a.resultDt
+		       ) b on a.date = b.resultDt
+		 where 1 = 1
+		   and date_format(a.date, '%Y%m') = substr(replace(#{yyyyMm}, '-', ''), 1, 6)
+		 order by a.date
+	</select>
+	
+	<select id="selectReportStore" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Statistics.selectReportStore */
+		SELECT a.storenm,a.TOT_RESULT,a.TOT_GOAL,a.rank
+	   ,(SELECT COUNT(*) FROM ZM_SALES_STORE WHERE 1=1 AND zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND use_yn ='Y') cnt
+		FROM(
+				select (select store_nm from ZM_SALES_STORE WHERE 1=1 AND store_seq = b.store_seq) AS storenm
+				     , ifnull(format(b.resultAmt, '##0.######'), 0) as TOT_RESULT
+				     , ifnull(format(b.goalAmt, '##0.######'), 0) as TOT_GOAL
+				     ,( @vRank := @vRank + 1) AS rank
+				  from (
+				        
+				        select a.zemos_idx  
+				             , a.wrkplc_idx  
+				             , a.store_seq  
+				             , a.yyyy
+				             , a.mm
+				             , sum(a.goalAmt) as goalAmt
+				             , sum(a.resultAmt) as resultAmt
+				          from (
+				                select a.zemos_idx  
+				                     , a.wrkplc_idx  
+				                     , a.store_seq  
+				                     , date_format(a.result_dt, '%Y') as yyyy
+				                     , date_format(a.result_dt, '%m') as mm
+				                     , 0 as goalAmt
+				                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+				    		              when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+				    		              when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+				    			          else 0 end AS resultAmt
+				                     <!-- 
+				                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt  
+				                            when a.request_yn = 'Y' then d.change_amt 
+				                            when a.request_yn = 'N' then b.amt  
+				                            else 0 end AS resultAmt 
+				                      -->       
+				                 from ZM_SALES_RESULT_MNG a  
+				                      inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq  
+				                      left join ZM_SALES_HISTORY_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and a.result_seq = c.result_seq
+				                      and c.result_change_seq =  (SELECT MAX(result_change_seq) FROM ZM_SALES_HISTORY_MNG WHERE 1=1 AND result_seq = a.result_seq <!-- AND request_yn ='Y'-->)  
+				                      left join ZM_SALES_HISTORY_DETAIL d on c.history_seq = d.history_seq and a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and a.store_seq = d.store_seq and b.item_seq = d.item_seq  
+				                 where 1 = 1  
+				                   <if test='zemosIdx != null and zemosIdx != ""'>
+				                   and a.zemos_idx = #{zemosIdx}
+				                   </if>
+				                   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				                   and a.wrkplc_idx = #{wrkplcIdx}
+				                   </if>
+				                   and date_format(a.result_dt, '%Y%m') between replace(#{startMonth}, '-', '') and replace(#{endMonth}, '-', '')
+				                  and b.amt <![CDATA[<>]]> 0
+				                union all
+				                select a.zemos_idx  
+				                	 , a.wrkplc_idx 
+				                     , a.store_seq  
+				                	 , a.year as yyyy
+				                	 , a.mm as mm
+				                	 , a.amt as goalAmt
+				                	 , 0 as resultAmt
+				                  from ZM_SALES_GOAL a  	
+				                 where 1 = 1
+				                   <if test='zemosIdx != null and zemosIdx != ""'>
+				                   and a.zemos_idx = #{zemosIdx}
+				                   </if>
+				                   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				                   and a.wrkplc_idx = #{wrkplcIdx}
+				                   </if>
+				                   and concat(a.year, a.mm) between replace(#{startMonth}, '-', '') and replace(#{endMonth}, '-', '')
+				                   and a.amt <![CDATA[<>]]> 0  
+				               ) a
+				               inner join ZM_SALES_STORE b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq		               
+				               		               
+				         where 1 = 1
+				           <if test="class1Seq != null and class1Seq != ''">
+					       and b.class1 = #{class1Seq}
+					       </if>
+					       <if test="class2Seq != null and class2Seq != ''">
+					       and b.class2 = #{class2Seq}
+					       </if>
+					       <if test="class3Seq != null and class3Seq != ''">
+					       and b.class3 = #{class3Seq}
+					       </if>
+				         group by a.store_seq,a.yyyy, a.mm
+				       ) b 
+				 where 1 = 1
+				 <if test='TOP1 != null and TOP1 != "" and TOP1 == "0"'>
+				 order by b.resultAmt desc) a,
+				 </if>
+				 <if test='TOP1 != null and TOP1 != "" and TOP1 == "1"'>
+				 order by b.resultAmt desc) a,
+				 </if>				 
+				 <if test='TOP1 != null and TOP1 != "" and TOP1 == "2"'>
+				 order by b.resultAmt) a,
+				 </if>
+			(SELECT @vRank :=0 ) AS  b
+			WHERE 1=1
+			<if test='TOP1 != null and TOP1 != "" and TOP1 == "1"'>
+			AND a.rank  <![CDATA[ < ]]> '11'
+			</if>
+			<if test='TOP1 != null and TOP1 != "" and TOP1 == "2"'>
+			AND a.rank  <![CDATA[ < ]]> '11'
+			</if>
+	</select>
+	
+	<select id="selectReportItem" parameterType="java.util.HashMap" resultType="java.util.HashMap">
+		/* zenielm.zemos3.family.sales2.sales2Statistics.selectReportItem */
+		SELECT a.itemnm,a.TOT_RESULT,a.rank
+	   ,(SELECT COUNT(*) FROM ZM_SALES_ITEM WHERE 1=1 AND zemos_idx = #{zemosIdx} AND wrkplc_idx = #{wrkplcIdx} AND use_yn ='Y') cnt
+		FROM(
+				select (select item_nm from ZM_SALES_ITEM WHERE 1=1 AND item_seq = b.item_seq) AS itemnm
+				     , ifnull(format(b.resultAmt, '##0.######'), 0) as TOT_RESULT
+				     ,( @vRank := @vRank + 1) AS rank
+				  from (
+				        
+				        select a.zemos_idx  
+				             , a.wrkplc_idx  
+				             , a.item_seq  
+				             , a.yyyy
+				             , a.mm
+				             , sum(a.resultAmt) as resultAmt
+				          from (
+				                select a.zemos_idx  
+				                     , a.wrkplc_idx  
+				                     , b.item_seq  
+				                     , date_format(a.result_dt, '%Y') as yyyy
+				                     , date_format(a.result_dt, '%m') as mm
+				                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and (c.request_yn is null or c.request_yn = '') then b.amt
+				    		              when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') and c.request_yn = 'W' then b.amt
+				    		              when (a.request_yn = 'Y' and c.request_yn = 'Y' and d.detail_history_seq is not null) then d.change_amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'Y' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'N' and d.detail_history_seq is not null) then d.result_amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'N' and (d.detail_history_seq is null or d.detail_history_seq = '')) then b.amt
+				    			          when (a.request_yn = 'Y' and c.request_yn = 'W') then d.result_amt
+				    			          else 0 end AS resultAmt
+				                     <!-- 
+				                     , case when (a.request_yn = 'W' or a.request_yn = 'D' or a.request_yn is null or a.request_yn = '') then b.amt  
+				                            when a.request_yn = 'Y' then d.change_amt 
+				                            when a.request_yn = 'N' then b.amt  
+				                            else 0 end AS resultAmt 
+				                      -->       
+				                 from ZM_SALES_RESULT_MNG a  
+				                      inner join ZM_SALES_RESULT_DETAIL b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.store_seq = b.store_seq and a.result_seq = b.result_seq  
+				                      left join ZM_SALES_HISTORY_MNG c on a.zemos_idx = c.zemos_idx and a.wrkplc_idx = c.wrkplc_idx and a.store_seq = c.store_seq and a.result_seq = c.result_seq
+				                      and c.result_change_seq =  (SELECT MAX(result_change_seq) FROM ZM_SALES_HISTORY_MNG WHERE 1=1 AND result_seq = a.result_seq <!-- AND request_yn ='Y'-->)  
+				                      left join ZM_SALES_HISTORY_DETAIL d on c.history_seq = d.history_seq and a.zemos_idx = d.zemos_idx and a.wrkplc_idx = d.wrkplc_idx and b.item_seq = d.item_seq  
+				                 where 1 = 1  
+				                   <if test='zemosIdx != null and zemosIdx != ""'>
+				                   and a.zemos_idx = #{zemosIdx}
+				                   </if>
+				                   <if test='wrkplcIdx != null and wrkplcIdx != ""'>
+				                   and a.wrkplc_idx = #{wrkplcIdx}
+				                   </if>
+				                   and date_format(a.result_dt, '%Y%m') between replace(#{startMonth}, '-', '') and replace(#{endMonth}, '-', '')
+				                  and b.amt <![CDATA[<>]]> 0				                
+				               ) a
+				               inner join ZM_SALES_ITEM b on a.zemos_idx = b.zemos_idx and a.wrkplc_idx = b.wrkplc_idx and a.item_seq = b.item_seq		               
+				               		               
+				         where 1 = 1
+				           <if test="class1Seq != null and class1Seq != ''">
+					       and b.class1 = #{class1Seq}
+					       </if>
+					       <if test="class2Seq != null and class2Seq != ''">
+					       and b.class2 = #{class2Seq}
+					       </if>
+					       <if test="class3Seq != null and class3Seq != ''">
+					       and b.class3 = #{class3Seq}
+					       </if>
+				         group by a.item_seq,a.yyyy, a.mm
+				       ) b 
+				 where 1 = 1
+				 <if test='TOP2 != null and TOP2 != "" and TOP2 == "0"'>
+				 order by b.resultAmt desc) a,
+				 </if>
+				 <if test='TOP2 != null and TOP2 != "" and TOP2 == "1"'>
+				 order by b.resultAmt desc) a,
+				 </if>				 
+				 <if test='TOP2 != null and TOP2 != "" and TOP2 == "2"'>
+				 order by b.resultAmt) a,
+				 </if>
+			(SELECT @vRank :=0 ) AS  b
+			WHERE 1=1
+			<if test='TOP2 != null and TOP2 != "" and TOP2 == "1"'>
+			AND a.rank  <![CDATA[ < ]]> '11'
+			</if>
+			<if test='TOP2 != null and TOP2 != "" and TOP2 == "2"'>
+			AND a.rank  <![CDATA[ < ]]> '11'
+			</if>
+	</select>
+	
+</mapper>
