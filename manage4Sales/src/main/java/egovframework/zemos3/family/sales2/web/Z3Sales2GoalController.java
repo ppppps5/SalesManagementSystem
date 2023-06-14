@@ -54,7 +54,7 @@ import egovframework.zemos3.family.sales2.service.Z3Sales2GaolService;
  *  </pre>
  */
 @Controller
-public class Z3Sales2GoalController {
+public class Z3Sales2GoalController { 
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Z3Sales2GaolController.class);
 
