@@ -6,20 +6,14 @@ import java.util.Map;
 /**
  * 판매관리 목표 서비스 클래스
  * 
- * @author 이엠룩
- * @since 2022.09.13
- * @version 1.0
- * @see
- *  
  * <pre>
  * << 개정이력(Modification Information) >>
  * 
  *   수정일      수정자          수정내용
  *  -------    --------    ---------------------------
- *  2021.08.13  이엠룩          최초 생성 
  *  </pre>
  */
-public interface Z3Sales2GaolService {
+public interface Z3Sales2GoalService {
 	
 	/**
 	 * 화면 년도 selectbox(현재년도의 이전 15년 ~ 이후 3년)

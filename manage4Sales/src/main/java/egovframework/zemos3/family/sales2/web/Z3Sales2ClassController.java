@@ -36,17 +36,11 @@ import egovframework.zemos3.family.sales2.service.Z3Sales2StoreService;
 /**
  * 판매실적관리 분류1 Controller
  * 
- * @author 이엠룩
- * @since 2022.09.02
- * @version 1.0
- * @see
- *  
  * <pre>
  * << 개정이력(Modification Information) >>
  * 
  *   수정일      수정자          수정내용
  *  -------    --------    ---------------------------
- *  2022.09.02  이엠룩          최초 생성 
  *  </pre>
  */
 @Controller

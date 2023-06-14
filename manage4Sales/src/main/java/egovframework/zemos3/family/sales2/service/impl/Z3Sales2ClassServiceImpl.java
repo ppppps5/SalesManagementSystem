@@ -17,17 +17,12 @@ import egovframework.zemos3.zemos.menu.service.impl.Z3ZemosMenuErpHDAO;
 /**
  * 판매관리 품목/분류명관리 서비스Impl 클래스
  * 
- * @author 이엠룩
- * @since 2022.09.02
- * @version 1.0
- * @see
  *  
  * <pre>
  * << 개정이력(Modification Information) >>
  * 
  *   수정일      수정자          수정내용
  *  -------    --------    ---------------------------
- *  2022.09.02  이엠룩          최초 생성 
  *  </pre>
  */
 @Service("z3Sales2ClassService")
